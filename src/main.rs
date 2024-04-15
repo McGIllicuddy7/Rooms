@@ -2,6 +2,8 @@
 
 use raylib::{ffi::sqrt, prelude::*};
 use rand;
+const screen_height:i32 = 1000;
+const screen_width:i32 = 1000;
 struct TreeRoom{
     pub x: i32,
     pub y: i32, 
@@ -66,8 +68,8 @@ impl TreeRoom {
         let tmp :(i32,i32) = self.center();
         let cx :f64 =  tmp.0 as f64;
         let cy :f64 = tmp.1 as f64;
-        let dx :f64 = (cx-400.0)*(cx-400.0);
-        let dy :f64 = (cy-400.0)*(cy-400.0);
+        let dx :f64 = (cx-(screen_width/2) as f64)*(cx-(screen_width/2) as f64);
+        let dy :f64 = (cy-(screen_height/2) as f64)*(cy-(screen_height/2) as f64);
         unsafe{
             return sqrt(dx+dy) as i32;
         }
@@ -94,7 +96,7 @@ impl TreeRoom {
                     return; 
                 }
             }
-            if self.height <10 || self.width<10{
+            if self.height <screen_height/100 || self.width<screen_width/100{
                 return;
             }
             let max:i32;
@@ -235,12 +237,12 @@ impl TreeRoom {
 fn main() {
     let mut r = TreeRoom::new(0,0, 800, 800);
     r.split(11);
-    r.drop_random(0, 150, 300);
+    r.drop_random(0, 150, screen_width/3);
     r.generate_hallways();
     let a = r.flatten();
     raylib::set_trace_log(TraceLogLevel::LOG_ERROR);
     let (mut rl, thread) = raylib::init()
-        .size(800, 800)
+        .size(screen_width, screen_height)
         .title("Hello, World")
         .build();
      
