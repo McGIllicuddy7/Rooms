@@ -1,3 +1,4 @@
+
 use crate::utils;
 use crate::config;
 use raylib::{ffi::sqrt, prelude::*, math::Vector2};
@@ -296,10 +297,10 @@ pub fn purge_not_on_top(modified:&Vec<Room>, base: &Vec<Room> )->Vec<Room>{
     }
     return out;
 }
-pub fn new_building() ->Vec<Room>{
+pub fn new_building(radmin:usize, radmax:usize) ->Vec<Room>{
     let mut r = TreeRoom::new(0,0, 800, 800);
     r.split(8);
-    r.drop_random(0, 150, config::SCREEN_WIDTH/3);
+    r.drop_random(0, radmin as i32, radmax as i32);
     return r.flatten();
 }
 pub fn new_floor(previous: &Vec<Room>)->Vec<Room>{

@@ -1,5 +1,4 @@
-
-    use raylib::prelude::*;
+use raylib::prelude::*;
 pub fn draw_rectangle(handle: &mut RaylibDrawHandle, x:i32, y:i32, height:i32, width:i32){
     let cy =y;
     handle.draw_line(x, cy,x+width, cy ,Color::BLACK);
