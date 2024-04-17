@@ -7,8 +7,9 @@ use raylib::{consts::KeyboardKey, prelude::*};
 
 
 fn main() {
-    let num_floors = 3;
-    let mut b: building::Building = building::generate_building(40, num_floors);
+    let num_floors = 5;
+    let num_rooms = 10;
+    let mut b: building::Building = building::generate_building(num_rooms, num_floors);
     raylib::set_trace_log(TraceLogLevel::LOG_ERROR);
     let (mut rl, thread) = raylib::init()
         .size(config::SCREEN_WIDTH, config::SCREEN_HEIGHT)
@@ -30,7 +31,7 @@ fn main() {
             }
         }
         if rl.is_key_pressed(KeyboardKey::KEY_W){
-            b= building::generate_building(40, num_floors);
+            b= building::generate_building(num_rooms, num_floors);
             floor = 0;
         }
         let mut d = rl.begin_drawing(&thread);

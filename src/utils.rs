@@ -18,6 +18,9 @@ pub fn dist(a:i32, b:i32) ->i32{
 
 }
 pub fn generate_toward_mid(min:i32, max:i32, num_its:i32)->i32{
+    if max == min{
+        return max;
+    }
     let mid = (max+min)/2;
     let mut closest: i32 = (random() as i32)%(max-min)+min;
     let mut min_dist :i32 = dist(closest, mid);
