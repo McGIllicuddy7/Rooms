@@ -2,6 +2,7 @@
 use crate::utils;
 use crate::config;
 use raylib::{ffi::sqrt, prelude::*, math::Vector2};
+
 pub struct TreeRoom{
     pub x: i32,
     pub y: i32, 
@@ -33,10 +34,12 @@ impl Room{
     }
     pub fn render(&self,handle: &mut RaylibDrawHandle){
         utils::draw_rectangle(handle, self.x, self.y, self.height, self.width);
-        let cs = self.corners();
+        //let cs = self.corners();
+        /* 
         for s in cs{
             handle.draw_circle_v(s, 4.0, Color::RED);
         }
+        */
     }
     pub fn _render_debug(&self, selves:&Vec<Self>,handle:&mut RaylibDrawHandle){
         utils::draw_rectangle(handle, self.x, self.y, self.height, self.width);
@@ -130,17 +133,12 @@ impl TreeRoom {
         self.child_2 =Some(Box::new(TreeRoom::new(self.x, self.y+split, self.height-split, self.width)));
     }
     pub fn split_recurse(&mut self, max_depth:usize, depth:usize){
-        if depth>=max_depth{
+        if depth>max_depth{
             return;
         }
         if self.is_bottom() {
             let rat:f32 = self.height as f32 /self.width as f32 ;
-            let rat2 :f32 = self.width as f32 /self.height as f32 ;
-            if depth == max_depth-2{
-                if rat >0.666667 && rat<1.5{
-                    return; 
-                }
-            }
+            let rat2 :f32 = self.width as f32 /self.height as f32;
             if self.height*self.width<config::MIN_AREA{
                 return;
             }
@@ -221,12 +219,18 @@ impl TreeRoom {
             return;
         }
         if depth>4{
-            if self.dist_to_center()>utils::generate_toward_mid(rad_min,rad_max, 4){
+            if self.dist_to_center()>utils::generate_toward_mid(rad_min,rad_max, 5){
                 self.child_1 = None;
                 self.child_2 = None;
                 if self.is_bottom(){
                     self.dropped = true;
                 }
+            }
+        }
+        if self.is_bottom(){
+            let rad = self.width as f64 / self.height as f64;
+            if self.width*self.height>100*100 ||rad <0.3 || rad>1.5 {
+                self.dropped = true;
             }
         }
         self.drop_c1(depth, rad_min, rad_max);

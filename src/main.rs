@@ -7,8 +7,15 @@ use raylib::{consts::KeyboardKey, prelude::*};
 
 
 fn main() {
-    let num_floors = 5;
-    let num_rooms = 10;
+    /* 
+    for s  in  5..100{
+        let num_floors = 3;
+        let num_rooms = s;
+        let mut b: building::Building = building::generate_building(num_rooms, num_floors);
+    }
+    */
+    let num_floors = 3;
+    let num_rooms =16;
     let mut b: building::Building = building::generate_building(num_rooms, num_floors);
     raylib::set_trace_log(TraceLogLevel::LOG_ERROR);
     let (mut rl, thread) = raylib::init()
@@ -37,7 +44,7 @@ fn main() {
         let mut d = rl.begin_drawing(&thread);
         d.clear_background(Color::WHITE);
         b.render_floor(floor, &mut d);
-        let s = format(format_args!("drawing floor: {}", floor));
+        let s = format(format_args!("drawing floor: {} with {} rooms", floor,b.floors[floor].len()));
         d.draw_text(&s,800, 800, 16, Color::BLACK);
     }
 }
