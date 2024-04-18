@@ -3,6 +3,7 @@ use raylib::drawing::RaylibDrawHandle;
 use raylib::prelude::Vector2;
 use crate::{config, room::{self, purge_not_on_top, TreeRoom}};
 use std::time::Instant;
+use std::thread;
 pub struct Building{
     pub floors: Vec<Vec<room::Room>>,
 
@@ -29,7 +30,7 @@ pub fn _floor_divergence(floor: &Vec<room::Room>)->f64{
     }
     return max;
 }
-pub fn floor_radius(floor: &Vec<room::Room>)->f64{
+pub fn _floor_radius(floor: &Vec<room::Room>)->f64{
     let mut max:f64 = 0.0;
     let c = ((config::BUILDING_MAX+config::BUILDING_MIN)/2) as f32;
     let v = Vector2{x: c, y: c};
@@ -58,12 +59,25 @@ fn calc_depth(ground_floor_num:i32)->usize{
 }
 
 fn comparitior_weight(a: &Vec<room::Room>)->f64{
-    return floor_area(a)- floor_radius(a)*2 as f64+ (a.len()*10) as f64;
+    return floor_area(a)as f64+ (a.len()*10) as f64;
 }
 fn comparitor(a: &Vec<room::Room>, b:&Vec<room::Room>)->bool{
     let wa = comparitior_weight(a);
     let wb = comparitior_weight(b);
     return wa>wb;
+}
+fn gen_frst_floor(max_depth:&usize, mrad :&usize, maxrad:&usize, min:&usize)->(f64,TreeRoom){
+    loop{
+        let mut tree= room::TreeRoom::new(config::BUILDING_MIN, config::BUILDING_MIN,config::BUILDING_MAX, config::BUILDING_MAX);
+        tree.split(*max_depth);
+        tree.drop_random(0, *mrad as i32, *maxrad as i32);
+        let floors = tree.flatten();
+        let r = comparitior_weight(&floors);
+        if floors.len()<*min{
+            continue;
+        }
+        return (r, tree);
+    } 
 }
 pub fn generate_building(ground_floor_num:i32, num_floors:usize)->Building{
     if ground_floor_num<1{
@@ -82,37 +96,21 @@ pub fn generate_building(ground_floor_num:i32, num_floors:usize)->Building{
     let mut root:TreeRoom = room::TreeRoom::new(config::BUILDING_MIN, config::BUILDING_MIN,config::BUILDING_MAX, config::BUILDING_MAX);
     let mut weight:f64  = 0 as f64;
     let start = Instant::now();
-    for _ in 0..4{
-        loop{
-            let mut tree= room::TreeRoom::new(config::BUILDING_MIN, config::BUILDING_MIN,config::BUILDING_MAX, config::BUILDING_MAX);
-            tree.split(max_depth);
-            tree.drop_random(0, mrad as i32, maxrad as i32);
-            let floors = tree.flatten();
-            let r = comparitior_weight(&floors);
-            if floors.len()<min{
-                //println!("{}",floors.len());
-                continue;
-            }
-            if r>weight{
-                root = tree;
-                weight= r;
-                //println!("r:{}, weight:{}", r, weight);
-                break;
-            } else{
-                if r*1.5<weight{
-                    tree = root.template();
-                    tree.split_recurse(max_depth-1, 0);
-                    tree.drop_random(0, mrad as i32, maxrad as i32);
-                    let floors = tree.flatten();
-                    let r = comparitior_weight(&floors);
-                    if  r>weight{
-                        //println!("r:{}, weight{}", r, weight);
-                        root = tree;
-                        weight = r;
-                        break;
-                    }
-                }
-            }
+    let max_iter = 4;
+    let mut potential_nodes: Vec<(f64, TreeRoom)> = Vec::new();
+    for _ in 0..max_iter{
+        potential_nodes.push((0.0, TreeRoom::new(0,0, 10,10)));
+    }
+    let mut threads = vec![];
+    for _ in 0..10{
+        let a = thread::spawn(move||(gen_frst_floor(&max_depth, &mrad, &maxrad, &min)));
+        threads.push(a);
+    }
+    for a in threads{
+        let t = a.join().unwrap();
+        if t.0>weight{
+            weight = t.0;
+            root = t.1;
         }
     }
     out.floors.push(root.flatten());

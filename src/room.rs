@@ -222,9 +222,7 @@ impl TreeRoom {
             if self.dist_to_center()>utils::generate_toward_mid(rad_min,rad_max, 5){
                 self.child_1 = None;
                 self.child_2 = None;
-                if self.is_bottom(){
-                    self.dropped = true;
-                }
+                self.dropped = true;
             }
         }
         if self.is_bottom(){
@@ -260,6 +258,9 @@ impl TreeRoom {
         return Room{x:self.x, y:self.y, width:self.width, height:self.height};
     }
     pub fn flatten(&self) ->Vec<Room>{
+        if self.dropped{
+            return vec![];
+        }
         if self.is_bottom(){
             if !self.dropped{
                 return vec![self.to_room()];
