@@ -30,7 +30,8 @@ impl Room{
         let y = self.y as f32;
         let h = self.height as f32;
         let w = self.width as f32;
-        return vec![Vector2{x:x, y:y},Vector2{x:x, y:y+h}, Vector2{x:x+w, y:y},Vector2{x:x+w, y:y+h}];
+        let o = 1 as f32;
+        return vec![Vector2{x:x+o, y:y+o},Vector2{x:x+o, y:y+h-o}, Vector2{x:x+w-o, y:y+o},Vector2{x:x+w-o, y:y+h-o}];
     }
     pub fn render(&self,handle: &mut RaylibDrawHandle){
         utils::draw_rectangle(handle, self.x, self.y, self.height, self.width);
@@ -52,7 +53,8 @@ impl Room{
         }
     }
     pub fn to_rect(&self)->Rectangle{
-        return Rectangle{x: self.x as f32, y: self.y as f32, width: self.width as f32, height: self.height as f32};
+        let ofst =0;
+        return Rectangle{x: (self.x+ofst) as f32, y: (self.y+ofst) as f32, width: (self.width-ofst) as f32, height: (self.height-ofst) as f32};
     }
     pub fn inside(&self, loc:Vector2)->bool{
         return self.to_rect().check_collision_point_rec(loc);
@@ -97,6 +99,38 @@ fn inside_set(point:Vector2, set: &Vec<Room>,ignore: &Room)->bool{
         }
     }
     return false;
+}
+fn is_degen_room(r:&Room, floor:&Vec<Room>)->bool{
+    for v in r.corners(){
+        if inside_set(v, floor, r){
+            return true;
+        }
+    }
+    return false;
+}
+pub fn _is_degenerate(floor:&Vec<Room>)->bool{
+    for r in floor{
+        if is_degen_room(r, floor){
+            return false;
+        }
+    }
+    return false;
+}
+pub fn purge_degenerates(floor:&Vec<Room>)->Vec<Room>{
+    let mut non_degen = floor.clone();
+    let mut counter = 0;
+    loop{
+        if counter>=non_degen.len(){
+            break;
+        }
+        if is_degen_room(&non_degen[counter], &non_degen){
+            non_degen.remove(counter);
+            counter = 0;
+            counter += 1;
+        }
+        counter += 1;
+    }
+    return non_degen;
 }
 impl TreeRoom {
     pub fn new(x:i32, y:i32, height:i32, width:i32) -> Self {
