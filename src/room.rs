@@ -30,8 +30,12 @@ impl Room{
         let y = self.y as f32;
         let h = self.height as f32;
         let w = self.width as f32;
-        let o = 1 as f32;
+        let o =0.05 as f32;
         return vec![Vector2{x:x+o, y:y+o},Vector2{x:x+o, y:y+h-o}, Vector2{x:x+w-o, y:y+o},Vector2{x:x+w-o, y:y+h-o}];
+    }
+    pub fn lines(&self)->Vec<(Vector2, Vector2)>{
+        let c = self.corners();
+        return vec![(c[0], c[1]), (c[0], c[2]), (c[1], c[3]), (c[2], c[3])];
     }
     pub fn render(&self,handle: &mut RaylibDrawHandle){
         utils::draw_rectangle(handle, self.x, self.y, self.height, self.width);
@@ -100,9 +104,23 @@ fn inside_set(point:Vector2, set: &Vec<Room>,ignore: &Room)->bool{
     }
     return false;
 }
+fn lin_collided(line: (Vector2, Vector2),floor:&Vec<Room>,ignore: &Room)->bool{
+    for r in floor{
+        if r.is_equal(ignore){
+            continue;
+        }
+        for l in r.lines(){
+            let s= raylib::check_collision_lines(line.0, line.1, l.0, l.1);
+            if s.is_some(){
+                return true;
+            }
+        }
+    }
+    return false;
+}
 fn is_degen_room(r:&Room, floor:&Vec<Room>)->bool{
-    for v in r.corners(){
-        if inside_set(v, floor, r){
+    for v in r.lines(){
+        if lin_collided(v, floor, r){
             return true;
         }
     }
@@ -126,7 +144,7 @@ pub fn purge_degenerates(floor:&Vec<Room>)->Vec<Room>{
         if is_degen_room(&non_degen[counter], &non_degen){
             non_degen.remove(counter);
             counter = 0;
-            counter += 1;
+            continue;
         }
         counter += 1;
     }
@@ -261,7 +279,7 @@ impl TreeRoom {
         }
         if self.is_bottom(){
             let rad = self.width as f64 / self.height as f64;
-            if self.width*self.height>100*100 ||rad <0.3 || rad>1.5 {
+            if rad <0.5 || rad>1.2 {
                 self.dropped = true;
             }
         }

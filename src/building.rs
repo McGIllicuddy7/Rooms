@@ -66,12 +66,13 @@ fn comparitor(a: &Vec<room::Room>, b:&Vec<room::Room>)->bool{
     let wb = comparitior_weight(b);
     return wa>wb;
 }
-fn gen_frst_floor(max_depth:&usize, mrad :&usize, maxrad:&usize, min:&usize)->(f64,TreeRoom){
+fn gen_frst_floor(max_depth:&usize, mrad :&usize, maxrad:&usize, min:&usize, max:&usize)->(f64,TreeRoom){
     let mut root:TreeRoom = TreeRoom::new(1,1,10,10,);
     let mut weight:f64 = 0.0;
     let mut i =0;
+    let mx = 10;
     loop{
-        if i>2{
+        if i>mx{
             break;
         }
         let mut tree= room::TreeRoom::new(config::BUILDING_MIN, config::BUILDING_MIN,config::BUILDING_MAX, config::BUILDING_MAX);
@@ -80,8 +81,9 @@ fn gen_frst_floor(max_depth:&usize, mrad :&usize, maxrad:&usize, min:&usize)->(f
         let floors = tree.flatten();
         let floors = room::purge_degenerates(&floors);
         let r = comparitior_weight(&floors);
-        if floors.len()<*min{
+        if floors.len()<*min || floors.len()>*max{
             i -= 1;
+            continue;
         }
         if r>weight{
             root = tree;
@@ -99,17 +101,17 @@ pub fn generate_building(ground_floor_num:i32, num_floors:usize)->Building{
     let mut out:Building = Building::new();
     let gfr = ground_floor_num;
     let min = (gfr as f64 *0.8) as usize;
-    let max = (gfr as f64 *2.0) as usize;
+    let max = (gfr as f64 *1.8) as usize;
     let gfn = (ground_floor_num) as f64;
-    let mut mrad = (gfn.sqrt()*24 as f64)as usize;
-    let mut maxrad =(gfn.sqrt()*24 as f64)as usize;
+    let mrad = (gfn.sqrt()*20 as f64)as usize;
+    let maxrad =(gfn.sqrt()*20 as f64)as usize;
     let mut prev :TreeRoom;
     let mut root:TreeRoom = room::TreeRoom::new(config::BUILDING_MIN, config::BUILDING_MIN,config::BUILDING_MAX, config::BUILDING_MAX);
     let mut weight:f64  = 0 as f64;
     let start = Instant::now();
     let mut threads = vec![];
     for _ in 0..10{
-        let a = thread::spawn(move||(gen_frst_floor(&max_depth, &mrad, &maxrad, &min)));
+        let a = thread::spawn(move||(gen_frst_floor(&max_depth, &mrad, &maxrad, &min, &max)));
         threads.push(a);
     }
     for a in threads{
@@ -121,8 +123,8 @@ pub fn generate_building(ground_floor_num:i32, num_floors:usize)->Building{
     }
     out.floors.push(root.flatten());
     prev = root;
-    mrad = min*min*4;
-    maxrad = max*max*4;
+    let mrad = (gfn.sqrt()*24 as f64)as usize;
+    let maxrad =(gfn.sqrt()*24 as f64)as usize;
     println!("first floor done in {:#?}", Instant::now()-start);
     for i in 1..num_floors{
         let start = Instant::now();

@@ -15,7 +15,7 @@ fn main() {
     }
     */
     let num_floors = 3;
-    let num_rooms =16;
+    let num_rooms =42;
     let mut b: building::Building = building::generate_building(num_rooms, num_floors);
     raylib::set_trace_log(TraceLogLevel::LOG_ERROR);
     let (mut rl, thread) = raylib::init()
