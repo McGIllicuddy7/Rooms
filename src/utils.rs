@@ -34,3 +34,6 @@ pub fn generate_toward_mid(min:i32, max:i32, num_its:i32)->i32{
     }
     return closest;
 }
+pub fn to_vec(x:i32, y:i32)->Vector2{
+    return Vector2{x:x as f32, y:y as f32};
+}

@@ -5,7 +5,6 @@ mod utils;
 use std::fmt::format;
 use raylib::{consts::KeyboardKey, prelude::*};
 
-
 fn main() {
     /* 
     for s  in  5..100{
@@ -15,7 +14,7 @@ fn main() {
     }
     */
     let num_floors = 3;
-    let num_rooms =42;
+    let num_rooms = 128;
     let mut b: building::Building = building::generate_building(num_rooms, num_floors);
     raylib::set_trace_log(TraceLogLevel::LOG_ERROR);
     let (mut rl, thread) = raylib::init()

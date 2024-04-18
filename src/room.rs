@@ -1,7 +1,8 @@
 
 use crate::utils;
+use crate::utils::to_vec;
 use crate::config;
-use raylib::{ffi::sqrt, prelude::*, math::Vector2};
+use raylib::{prelude::*, math::Vector2};
 
 pub struct TreeRoom{
     pub x: i32,
@@ -25,6 +26,17 @@ impl Clone for Room{
     }
 }
 impl Room{
+        pub fn center(&self) ->(i32,i32){
+            return ((self.x+self.width/2), (self.y+self.height/2));
+        }
+    pub fn dist_to_center(&self)->i32{
+        let tmp :(i32,i32) = self.center();
+        let cx :f64 =  tmp.0 as f64;
+        let cy :f64 = tmp.1 as f64;
+        let dx :f64 = (cx-(config::SCREEN_WIDTH/2) as f64)*(cx-(config::SCREEN_WIDTH/2) as f64);
+        let dy :f64 = (cy-(config::SCREEN_HEIGHT/2) as f64)*(cy-(config::SCREEN_HEIGHT/2) as f64);
+        return (dx+dy).sqrt() as i32;
+    }
     pub fn corners(&self)->Vec<Vector2>{
         let x = self.x as f32;
         let y = self.y as f32;
@@ -124,6 +136,11 @@ fn is_degen_room(r:&Room, floor:&Vec<Room>)->bool{
             return true;
         }
     }
+    for c in r.corners(){
+        if inside_set(c, floor, r){
+            return true;
+        }
+    }
     return false;
 }
 pub fn _is_degenerate(floor:&Vec<Room>)->bool{
@@ -170,9 +187,7 @@ impl TreeRoom {
         let cy :f64 = tmp.1 as f64;
         let dx :f64 = (cx-(config::SCREEN_WIDTH/2) as f64)*(cx-(config::SCREEN_WIDTH/2) as f64);
         let dy :f64 = (cy-(config::SCREEN_HEIGHT/2) as f64)*(cy-(config::SCREEN_HEIGHT/2) as f64);
-        unsafe{
-            return sqrt(dx+dy) as i32;
-        }
+        return( dx+dy).sqrt() as i32;
     }
     fn split_x(&mut self, breadth: i32){
         let split : i32 = utils::generate_toward_mid(self.width/2-breadth, self.width/2+breadth,3);
@@ -264,6 +279,28 @@ impl TreeRoom {
             self.child_2.as_mut().as_mut().unwrap().drop_random(depth+1, rad_min, rad_max);
         }
     }
+    pub fn drop_to_number(&mut self, desired_count:i32){
+        let flat = self.flatten();
+        let mut rad:i32 = 0;
+        let count:i32 = 0;
+        if desired_count == 0{
+            self.drop_random(0, 0, 0);
+            return;
+        }
+        loop{
+            let mut tcount = 0;
+            for r in &flat{
+                if r.dist_to_center()<rad{
+                    tcount += 1;
+                }
+            }
+            if tcount>desired_count && count<desired_count{
+                break;
+            }
+            rad += 5;
+        };
+        self.drop_random(0, rad as i32, rad as i32);
+    }
     pub fn drop_random(&mut self,depth :i32,rad_min:i32, rad_max:i32){
         if depth == 0{
             self.drop_c1(depth, rad_min, rad_max);
@@ -279,7 +316,7 @@ impl TreeRoom {
         }
         if self.is_bottom(){
             let rad = self.width as f64 / self.height as f64;
-            if rad <0.5 || rad>1.2 {
+            if rad <0.2 || rad>5.0{
                 self.dropped = true;
             }
         }
@@ -401,11 +438,108 @@ pub fn _new_floor(previous: &Vec<Room>)->Vec<Room>{
 }
 pub fn render_rooms(rooms: &Vec<Room>, handle: &mut RaylibDrawHandle){
     for i in rooms{
-        i.render(handle);
+        if !is_degen_room(i, rooms){
+            i.render(handle);
+        }
     }
 }
 pub fn _render_rooms_debug(rooms: &Vec<Room>,prev_floor:&Vec<Room>, handle: &mut RaylibDrawHandle){
     for i in rooms{
         i._render_debug(prev_floor, handle);
     }
+}
+fn get_point_idx(loc:Vector2,floor:&Vec<Room>)->Option<usize>{
+    for i in 0..floor.len(){
+        if floor[i].inside(loc){
+            return Some(i);
+        }
+    }
+    return None;
+}
+pub fn get_neighbors(room:usize, floor:&Vec<Room>)->Vec<usize>{
+    let of = 2;
+    let mut out = vec![];
+    let r =&floor[room];
+{
+    let mut top:Vec<usize> =Vec::new();
+    let mut current = r.x;
+    loop{
+        if current>r.x+r.width{
+            break;
+        }
+        let s = get_point_idx(to_vec(current, r.y-of), floor);
+        match s{
+            Some(idx)=>{
+                top.push(idx);
+                current = floor[idx].x+floor[idx].width;
+            }
+            None=>{
+                current += 1;
+            }
+        }
+    }
+    out.append(&mut top);
+}
+{
+    let mut left:Vec<usize> = Vec::new();
+    let mut current = r.y;
+    loop{
+        if current>r.y+r.height{
+            break;
+        }
+        let s = get_point_idx(to_vec(r.x-of, r.y+r.height), floor); 
+        match s{
+            Some(idx)=>{
+            left.push(idx);
+                current = floor[idx].y+floor[idx].height;
+            }
+            None=>{
+                current += 1;
+            }
+        }
+    }
+    out.append(&mut left);
+}
+{
+    let mut bottom:Vec<usize> =Vec::new();
+    let r =&floor[room];
+    let mut current = r.x;
+    loop{
+        if current>r.x+r.width{
+            break;
+        }
+        let s = get_point_idx(to_vec(current, r.y+r.height+of), floor);
+        match s{
+            Some(idx)=>{
+                bottom.push(idx);
+                current = floor[idx].x+floor[idx].width;
+            }
+            None=>{
+                current += 1;
+            }
+        }
+    }
+    out.append(&mut bottom);
+}
+{
+    let mut right:Vec<usize> = Vec::new();
+    let mut current = r.y;
+    loop{
+        if current>r.y+r.height{
+            break;
+        }
+        let s = get_point_idx(to_vec(r.x+r.width+of, r.y+r.height), floor); 
+        match s{
+            Some(idx)=>{
+            right.push(idx);
+                current = floor[idx].y+floor[idx].height;
+            }
+            None=>{
+                current += 1;
+            }
+        }
+    }
+    out.append(&mut right);
+}
+    return out;
 }
