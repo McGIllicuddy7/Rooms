@@ -3,7 +3,9 @@ use crate::utils;
 use crate::utils::to_vec;
 use crate::config;
 use raylib::{prelude::*, math::Vector2};
-
+pub enum Direction {
+    Top, Bottom, Left, Right,
+}
 pub struct TreeRoom{
     pub x: i32,
     pub y: i32, 
@@ -456,90 +458,141 @@ fn get_point_idx(loc:Vector2,floor:&Vec<Room>)->Option<usize>{
     }
     return None;
 }
+pub fn get_top_neighbors(room:usize, floor:&Vec<Room>)->Vec<usize>{
+        let of = 2;
+        let r =&floor[room];
+        let mut top:Vec<usize> =Vec::new();
+        let mut current = r.x;
+        loop{
+            if current>r.x+r.width{
+                break;
+            }
+            let s = get_point_idx(to_vec(current, r.y-of), floor);
+            match s{
+                Some(idx)=>{
+                    top.push(idx);
+                    if floor[idx].x+floor[idx].width>current{
+                        current = floor[idx].x+floor[idx].width+1;
+                    }
+                    current += 1;
+                }
+                None=>{
+                    current += 1;
+                }
+            }
+        }
+        println!("returned");
+       return top;
+}
+pub fn get_left_neighbors(room:usize, floor:&Vec<Room>)->Vec<usize>{
+        let of = 2;
+        let r =&floor[room];
+        let mut left:Vec<usize> = Vec::new();
+        let mut current = r.y;
+        loop{
+            if current>r.y+r.height{
+                break;
+            }
+            let s = get_point_idx(to_vec(r.x-of, r.y+r.height), floor); 
+            match s{
+                Some(idx)=>{
+                left.push(idx);
+                if floor[idx].x+floor[idx].width>current{
+                    current = floor[idx].x+floor[idx].width+1;
+                }
+                current += 1;
+                }
+                None=>{
+                    current += 1;
+                }
+            }
+        }
+        return left;
+}
+pub fn get_right_neighbors(room:usize, floor:&Vec<Room>)->Vec<usize>{
+        let of = 2;
+        let r =&floor[room];
+        let mut right:Vec<usize> = Vec::new();
+        let mut current = r.y;
+        loop{
+            if current>r.y+r.height{
+                break;
+            }
+            let s = get_point_idx(to_vec(r.x+r.width+of, r.y+r.height), floor); 
+            match s{
+                Some(idx)=>{
+                right.push(idx);
+                if floor[idx].x+floor[idx].width>current{
+                    current = floor[idx].x+floor[idx].width+1;
+                }
+                current += 1;
+                }
+                None=>{
+                    current += 1;
+                }
+            }
+        }
+        return right;
+}
+pub fn get_bottom_neighbors(room:usize, floor:&Vec<Room>)->Vec<usize>{
+        let of = 2;
+        let mut bottom:Vec<usize> =Vec::new();
+        let r =&floor[room];
+        let mut current = r.x;
+        loop{
+            if current>r.x+r.width{
+                break;
+            }
+            let s = get_point_idx(to_vec(current, r.y+r.height+of), floor);
+            match s{
+                Some(idx)=>{
+                    bottom.push(idx);
+                    if floor[idx].x+floor[idx].width>current{
+                        current = floor[idx].x+floor[idx].width+1;
+                    }
+                    current += 1;
+                }
+                None=>{
+                    current += 1;
+                }
+            }
+        }
+        return bottom;
+}
 pub fn get_neighbors(room:usize, floor:&Vec<Room>)->Vec<usize>{
-    let of = 2;
     let mut out = vec![];
     let r =&floor[room];
-{
-    let mut top:Vec<usize> =Vec::new();
-    let mut current = r.x;
-    loop{
-        if current>r.x+r.width{
-            break;
-        }
-        let s = get_point_idx(to_vec(current, r.y-of), floor);
-        match s{
-            Some(idx)=>{
-                top.push(idx);
-                current = floor[idx].x+floor[idx].width;
-            }
-            None=>{
-                current += 1;
-            }
-        }
-    }
-    out.append(&mut top);
-}
-{
-    let mut left:Vec<usize> = Vec::new();
-    let mut current = r.y;
-    loop{
-        if current>r.y+r.height{
-            break;
-        }
-        let s = get_point_idx(to_vec(r.x-of, r.y+r.height), floor); 
-        match s{
-            Some(idx)=>{
-            left.push(idx);
-                current = floor[idx].y+floor[idx].height;
-            }
-            None=>{
-                current += 1;
-            }
-        }
-    }
-    out.append(&mut left);
-}
-{
-    let mut bottom:Vec<usize> =Vec::new();
-    let r =&floor[room];
-    let mut current = r.x;
-    loop{
-        if current>r.x+r.width{
-            break;
-        }
-        let s = get_point_idx(to_vec(current, r.y+r.height+of), floor);
-        match s{
-            Some(idx)=>{
-                bottom.push(idx);
-                current = floor[idx].x+floor[idx].width;
-            }
-            None=>{
-                current += 1;
-            }
-        }
-    }
-    out.append(&mut bottom);
-}
-{
-    let mut right:Vec<usize> = Vec::new();
-    let mut current = r.y;
-    loop{
-        if current>r.y+r.height{
-            break;
-        }
-        let s = get_point_idx(to_vec(r.x+r.width+of, r.y+r.height), floor); 
-        match s{
-            Some(idx)=>{
-            right.push(idx);
-                current = floor[idx].y+floor[idx].height;
-            }
-            None=>{
-                current += 1;
-            }
-        }
-    }
-    out.append(&mut right);
-}
+    out.append(&mut get_top_neighbors(room, floor));
+    out.append(&mut get_right_neighbors(room, floor));
+    out.append(&mut get_left_neighbors(room, floor));
+    out.append(&mut get_bottom_neighbors(room, floor));
     return out;
+}
+fn contains(idx:usize, vec:&Vec<usize>)->bool{
+    for a in vec{
+        if *a == idx{
+            return true;
+        }
+    }
+    return false;
+}
+//returns the direction from r0 to r1
+pub fn get_relative_direction( r0:usize, r1:usize, floor:&Vec<Room>)->Option<Direction>{
+    let t = get_top_neighbors(r0, floor);
+    if contains(r1, &t){
+        return Some(Direction::Top);
+    }
+    let b = get_bottom_neighbors(r0, floor);
+    if contains(r1, &b){
+        return Some(Direction::Bottom);
+    }
+    let r = get_right_neighbors(r0, floor);
+    if contains(r1, &r){
+        return Some(Direction::Right);
+    }
+    let l = get_left_neighbors(r0, floor);
+    if contains(r1, &l){
+        return Some(Direction::Left);
+    }
+    return None;
 }

@@ -1,12 +1,60 @@
 
 use raylib::drawing::RaylibDrawHandle;
 use raylib::prelude::Vector2;
-use crate::{config, room::{self, purge_not_on_top, TreeRoom}};
+use crate::{config::{self, DEBUG_TIMING}, room::{self, purge_not_on_top, Direction, TreeRoom}, utils};
 use std:: time::Instant;
 use std::thread;
+pub struct Portal{
+    pub idx1:i32, 
+    pub idx2:i32,
+    pub location:Vector2,
+    pub dir:Direction,
+}
+impl Portal{
+    //direction from idx1 to idx2
+    pub fn link(floor: &Vec<room::Room>,idx1:i32, idx2:i32 , dir:room::Direction)->Option<Portal>{
+        let location:Vector2;
+        let r1 = floor[idx1 as usize].clone();
+        let r2 = floor[idx2 as usize].clone();
+        match dir {
+            room::Direction::Top=>{
+                let mid = (r1.x+r2.x+r2.width)/2;
+                if mid-r1.x<4{
+                    return None;
+                }
+                location = Vector2{x:mid as f32, y: r1.y as f32};
+            }
+            room::Direction::Bottom=>{
+                let mid = (r1.x+r2.x+r2.width)/2;
+                if mid-r1.x<4{
+                    return None;
+                }
+                location = Vector2{x:mid as f32, y: r2.y as f32};
+            }
+            room::Direction::Right=>{
+                let mid = (r1.y+r2.y+r2.height)/2;
+                if mid-r1.x<4{
+                    return None;
+                }
+                location = Vector2{x:r2.x as f32,y: mid as f32};
+            }
+            room::Direction::Left=>{
+                let mid = (r1.y+r2.y+r2.height)/2;
+                if mid-r1.x<4{
+                    return None;
+                }
+                location = Vector2{x:r1.x as f32,y: mid as f32};
+            }
+        }
+        return Some( Portal { idx1: idx2, idx2: idx1, location, dir});
+    }
+}
+
+
 pub struct Building{
     pub floors: Vec<Vec<room::Room>>,
-
+    pub stairs: Vec<Vec<Portal>>,
+    pub doors:Vec<Vec<Portal>>,
 }
 pub fn _floor_center(floor:&Vec<room::Room>)->Vector2{
     let mut out = Vector2{x:0.0, y:0.0};
@@ -113,7 +161,9 @@ fn generate_floors(ground_floor_num:i32, num_floors:usize)->Building{
     }
     out.floors.push(root.flatten());
     prev = root;
-    println!("first floor done in {:#?}", Instant::now()-start);
+    if DEBUG_TIMING{
+        println!("first floor done in {:#?}", Instant::now()-start);
+    }
     for i in 1..num_floors{
         let start = Instant::now();
         let mut l = prev.clone();
@@ -122,7 +172,7 @@ fn generate_floors(ground_floor_num:i32, num_floors:usize)->Building{
         let mut tmp = l.flatten();
         tmp = purge_not_on_top(&tmp, &out.floors[i-1]); 
         prev = l.template();
-        for _ in 0..5{
+        for _ in 0..3{
             loop{
             let mut tre0 = prev.clone();
             tre0 = tre0.template();
@@ -146,25 +196,75 @@ fn generate_floors(ground_floor_num:i32, num_floors:usize)->Building{
             break;
             }
         }
-        println!("floor {} finished in {:#?}",i+1,Instant::now()-start);
+        if DEBUG_TIMING{
+            println!("floor {} finished in {:#?}",i+1,Instant::now()-start);
+        }
         out.floors.push(tmp);
     }
     return out;
 }
-
+fn calc_door_room_iter(idx:usize, other:usize, reached:&mut Vec<bool>, out:&mut Vec<Portal>, floor:&mut Vec<room::Room>, dir: Direction){
+    if !reached[other]{
+        let p = Portal::link(floor,idx as i32, other as i32, dir);
+        if p.is_some(){
+            out.push(p.unwrap());
+            reached[other] = true;
+        }
+    }
+}
+fn calc_doors_room(idx:usize,floor:&mut Vec<room::Room>, reached:&mut Vec<bool>)->Vec<Portal>{
+    reached[idx] = true;
+    let mut out:Vec<Portal> = Vec::new();
+    for other in room::get_top_neighbors(idx, floor){
+        calc_door_room_iter(idx, other, reached, &mut out, floor,  room::Direction::Top);
+    }
+    for other in room::get_bottom_neighbors(idx, floor){
+        calc_door_room_iter(idx, other, reached, &mut out, floor,  room::Direction::Bottom);
+    }
+    for other in room::get_right_neighbors(idx, floor){
+        calc_door_room_iter(idx, other, reached, &mut out, floor,  room::Direction::Right);
+    }
+    for other in room::get_left_neighbors(idx, floor){
+        calc_door_room_iter(idx, other, reached, &mut out, floor,  room::Direction::Left);
+    }
+    return out;
+}
+fn calc_doors_floor(floor:&mut Vec<room::Room>)->Vec<Portal>{
+    let mut out:Vec<Portal> = Vec::new();
+    let mut reached = Vec::new();
+    for _ in 0..floor.len(){
+        reached.push(false);
+    }
+    for i in 0..floor.len(){
+        println!("calculating doors {}",i);
+        out.append(&mut calc_doors_room(i,floor, &mut reached));
+    }
+    return out;
+}
+fn calc_doors(build:&mut Building){
+    let mut p:Vec<Vec<Portal>> = Vec::new();
+    for floor in &mut build.floors{
+        p.push(calc_doors_floor(floor));
+    }
+    build.doors = p;
+}
 pub fn generate_building(ground_floor_num:i32, num_floors:usize)->Building{
-    let out = generate_floors(ground_floor_num, num_floors);
+    let mut  out = generate_floors(ground_floor_num, num_floors);
+    calc_doors(&mut out);
     return out;
 }
 impl Building{
     pub fn new()->Self{
-        return Self{floors:Vec::new()};
+        return Self{floors:Vec::new(), stairs:Vec::new(),doors:Vec::new()};
     }
     pub fn render_floor(&self, floor:usize, handle:&mut RaylibDrawHandle){
         if floor> self.floors.len(){
             return;
         }
-        room::render_rooms(&self.floors[floor], handle)
+        room::render_rooms(&self.floors[floor], handle);
+        for d in &self.doors[floor]{
+            utils::draw_rectangle(handle, d.location.x as i32, d.location.y as i32, 10, 10);
+        }
     }
     pub fn _num_floors(&self)->usize{
         return self.floors.len();
