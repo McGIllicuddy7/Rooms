@@ -1,54 +1,12 @@
 
 use raylib::drawing::RaylibDrawHandle;
 use raylib::prelude::Vector2;
-use crate::{config::{self, DEBUG_TIMING}, room::{self, purge_not_on_top, Direction, TreeRoom}, utils};
+use raylib::prelude::*;
+use crate::{config::{self, DEBUG_TIMING}, room::{self, purge_not_on_top, TreeRoom}, layout};
 use std:: time::Instant;
 use std::thread;
-pub struct Portal{
-    pub idx1:i32, 
-    pub idx2:i32,
-    pub location:Vector2,
-    pub dir:Direction,
-}
-impl Portal{
-    //direction from idx1 to idx2
-    pub fn link(floor: &Vec<room::Room>,idx1:i32, idx2:i32 , dir:room::Direction)->Option<Portal>{
-        let location:Vector2;
-        let r1 = floor[idx1 as usize].clone();
-        let r2 = floor[idx2 as usize].clone();
-        match dir {
-            room::Direction::Top=>{
-                let mid = (r1.x+r2.x+r2.width)/2;
-                if mid-r1.x<4{
-                    return None;
-                }
-                location = Vector2{x:mid as f32, y: r1.y as f32};
-            }
-            room::Direction::Bottom=>{
-                let mid = (r1.x+r2.x+r2.width)/2;
-                if mid-r1.x<4{
-                    return None;
-                }
-                location = Vector2{x:mid as f32, y: r2.y as f32};
-            }
-            room::Direction::Right=>{
-                let mid = (r1.y+r2.y+r2.height)/2;
-                if mid-r1.x<4{
-                    return None;
-                }
-                location = Vector2{x:r2.x as f32,y: mid as f32};
-            }
-            room::Direction::Left=>{
-                let mid = (r1.y+r2.y+r2.height)/2;
-                if mid-r1.x<4{
-                    return None;
-                }
-                location = Vector2{x:r1.x as f32,y: mid as f32};
-            }
-        }
-        return Some( Portal { idx1: idx2, idx2: idx1, location, dir});
-    }
-}
+use layout::Direction;
+use layout::Portal;
 
 
 pub struct Building{
@@ -141,7 +99,7 @@ fn generate_floors(ground_floor_num:i32, num_floors:usize)->Building{
     if ground_floor_num<1{
         panic!("not enough rooms");
     }
-    let max_depth = 16;
+    let max_depth = 17;
     let mut out:Building = Building::new();
     let mut prev :TreeRoom;
     let mut root:TreeRoom = room::TreeRoom::new(config::BUILDING_MIN, config::BUILDING_MIN,config::BUILDING_MAX, config::BUILDING_MAX);
@@ -203,54 +161,13 @@ fn generate_floors(ground_floor_num:i32, num_floors:usize)->Building{
     }
     return out;
 }
-fn calc_door_room_iter(idx:usize, other:usize, reached:&mut Vec<bool>, out:&mut Vec<Portal>, floor:&mut Vec<room::Room>, dir: Direction){
-    if !reached[other]{
-        let p = Portal::link(floor,idx as i32, other as i32, dir);
-        if p.is_some(){
-            out.push(p.unwrap());
-            reached[other] = true;
-        }
-    }
-}
-fn calc_doors_room(idx:usize,floor:&mut Vec<room::Room>, reached:&mut Vec<bool>)->Vec<Portal>{
-    reached[idx] = true;
-    let mut out:Vec<Portal> = Vec::new();
-    for other in room::get_top_neighbors(idx, floor){
-        calc_door_room_iter(idx, other, reached, &mut out, floor,  room::Direction::Top);
-    }
-    for other in room::get_bottom_neighbors(idx, floor){
-        calc_door_room_iter(idx, other, reached, &mut out, floor,  room::Direction::Bottom);
-    }
-    for other in room::get_right_neighbors(idx, floor){
-        calc_door_room_iter(idx, other, reached, &mut out, floor,  room::Direction::Right);
-    }
-    for other in room::get_left_neighbors(idx, floor){
-        calc_door_room_iter(idx, other, reached, &mut out, floor,  room::Direction::Left);
-    }
-    return out;
-}
-fn calc_doors_floor(floor:&mut Vec<room::Room>)->Vec<Portal>{
-    let mut out:Vec<Portal> = Vec::new();
-    let mut reached = Vec::new();
-    for _ in 0..floor.len(){
-        reached.push(false);
-    }
-    for i in 0..floor.len(){
-        println!("calculating doors {}",i);
-        out.append(&mut calc_doors_room(i,floor, &mut reached));
-    }
-    return out;
-}
-fn calc_doors(build:&mut Building){
-    let mut p:Vec<Vec<Portal>> = Vec::new();
-    for floor in &mut build.floors{
-        p.push(calc_doors_floor(floor));
-    }
-    build.doors = p;
-}
+
 pub fn generate_building(ground_floor_num:i32, num_floors:usize)->Building{
     let mut  out = generate_floors(ground_floor_num, num_floors);
-    calc_doors(&mut out);
+    for i in 0..num_floors{
+        let t = layout::calc_doors(&out.floors[i]);
+        out.doors.push(t);
+    }
     return out;
 }
 impl Building{
@@ -262,11 +179,61 @@ impl Building{
             return;
         }
         room::render_rooms(&self.floors[floor], handle);
+        for i in 0..self.floors[floor].len(){
+            let text = format!("{}", i);
+            let c = self.floors[floor][i].center();
+            handle.draw_text(text.as_str(),c.0,c.1-16, 16, Color::BLACK);
+        }
+        if self.doors.len()>floor{
         for d in &self.doors[floor]{
-            utils::draw_rectangle(handle, d.location.x as i32, d.location.y as i32, 10, 10);
+            handle.draw_circle_v(d.location, 4 as f32, Color::BLUE);
+            let text0 = format!("{}", d.idx1);
+            let text1= format!("{}", d.idx2);
+            let x = d.location.x as i32;
+            let y = d.location.y as i32;
+            match d.dir{
+                Direction::Top=>{
+                    handle.draw_text(text0.as_str(), x, y-16,12, Color::BLACK);
+                    handle.draw_text(text1.as_str(), x, y+8, 12, Color::BLACK);
+                }
+                Direction::Bottom=>{
+                    handle.draw_text(text0.as_str(), x, y+8,12, Color::BLACK);
+                    handle.draw_text(text1.as_str(), x, y-16, 12, Color::BLACK);
+                }
+                Direction::Left=>{
+                    handle.draw_text(text0.as_str(), x-8, y,12, Color::BLACK);
+                    handle.draw_text(text1.as_str(), x+8, y,12, Color::BLACK);
+                }
+                Direction::Right=>{
+                    handle.draw_text(text0.as_str(), x+8, y,12, Color::BLACK);
+                    handle.draw_text(text1.as_str(), x-8, y,12, Color::BLACK);
+                }
+            }
+        }
         }
     }
     pub fn _num_floors(&self)->usize{
         return self.floors.len();
+    }
+    pub fn scale(&mut self, scale:f64){
+        let x = (config::SCREEN_WIDTH/2) as f64;
+        let y = (config::SCREEN_HEIGHT/2) as f64;
+        for i in &mut self.floors{
+            for j in i{
+                let dx = (j.x as f64-x) *scale;
+                let dy = (j.y as f64-y)*scale;
+                j.x = (x+dx) as i32;
+                j.y = (y+dy) as i32;
+                j.height= ((j.height as f64)*scale) as i32;
+                j.width = ((j.width as f64)*scale) as i32;
+                
+            }
+        }
+        for i in &mut self.doors{
+            for j in i{
+                let delta = j.location-(Vector2{x:x as f32, y:y as f32});
+                j.location = delta.scale_by(scale as f32)+(Vector2{x:x as f32, y:y as f32});
+            }
+        }
     }
 }

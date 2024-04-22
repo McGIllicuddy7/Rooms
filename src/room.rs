@@ -1,11 +1,8 @@
 
 use crate::utils;
-use crate::utils::to_vec;
 use crate::config;
 use raylib::{prelude::*, math::Vector2};
-pub enum Direction {
-    Top, Bottom, Left, Right,
-}
+
 pub struct TreeRoom{
     pub x: i32,
     pub y: i32, 
@@ -53,12 +50,8 @@ impl Room{
     }
     pub fn render(&self,handle: &mut RaylibDrawHandle){
         utils::draw_rectangle(handle, self.x, self.y, self.height, self.width);
-        //let cs = self.corners();
-        /* 
-        for s in cs{
-            handle.draw_circle_v(s, 4.0, Color::RED);
-        }
-        */
+        let c = self.center();
+        handle.draw_circle(c.0, c.1, 5.0, Color::RED);
     }
     pub fn _render_debug(&self, selves:&Vec<Self>,handle:&mut RaylibDrawHandle){
         utils::draw_rectangle(handle, self.x, self.y, self.height, self.width);
@@ -67,7 +60,6 @@ impl Room{
             if inside_set(s, selves, self){
                 handle.draw_circle_v(s, 4.0, Color::GREEN);
             }
-
         }
     }
     pub fn to_rect(&self)->Rectangle{
@@ -124,7 +116,7 @@ fn lin_collided(line: (Vector2, Vector2),floor:&Vec<Room>,ignore: &Room)->bool{
             continue;
         }
         for l in r.lines(){
-            let s= raylib::check_collision_lines(line.0, line.1, l.0, l.1);
+            let s= raylib::check_collision_lines(line.0, line.1, l.1, l.0);
             if s.is_some(){
                 return true;
             }
@@ -154,20 +146,13 @@ pub fn _is_degenerate(floor:&Vec<Room>)->bool{
     return false;
 }
 pub fn purge_degenerates(floor:&Vec<Room>)->Vec<Room>{
-    let mut non_degen = floor.clone();
-    let mut counter = 0;
-    loop{
-        if counter>=non_degen.len(){
-            break;
+    let mut out = Vec::new();
+    for f in floor{
+        if !is_degen_room(f, floor){
+            out.push(f.clone());
         }
-        if is_degen_room(&non_degen[counter], &non_degen){
-            non_degen.remove(counter);
-            counter = 0;
-            continue;
-        }
-        counter += 1;
     }
-    return non_degen;
+    return out;
 }
 impl TreeRoom {
     pub fn new(x:i32, y:i32, height:i32, width:i32) -> Self {
@@ -192,12 +177,12 @@ impl TreeRoom {
         return( dx+dy).sqrt() as i32;
     }
     fn split_x(&mut self, breadth: i32){
-        let split : i32 = utils::generate_toward_mid(self.width/2-breadth, self.width/2+breadth,3);
+        let split : i32 = utils::generate_toward_mid(self.width/2-breadth, self.width/2+breadth,2);
         self.child_1 = Some(Box::new(TreeRoom::new(self.x, self.y,self.height, split)));
         self.child_2 = Some(Box::new(TreeRoom::new(self.x+split, self.y, self.height, self.width-split)));
     }
     fn split_y(&mut self, breadth: i32){
-        let split : i32 = utils::generate_toward_mid(self.height/2-breadth, self.height/2+breadth,3);
+        let split : i32 = utils::generate_toward_mid(self.height/2-breadth, self.height/2+breadth,2);
         self.child_1 = Some(Box::new(TreeRoom::new(self.x, self.y,split, self.width)));
         self.child_2 =Some(Box::new(TreeRoom::new(self.x, self.y+split, self.height-split, self.width)));
     }
@@ -219,7 +204,7 @@ impl TreeRoom {
             }
             let breadth:i32;
             if depth<max_depth-2{
-                breadth = (max)/2;
+                breadth = (max)/3;
             }
             else {
                 breadth = max/4;
@@ -353,7 +338,7 @@ impl TreeRoom {
             return vec![];
         }
         if self.is_bottom(){
-            if !self.dropped{
+            if !self.dropped && !(self.width*self.height>config::MIN_AREA){
                 return vec![self.to_room()];
             } else{
                 return vec![];
@@ -440,9 +425,7 @@ pub fn _new_floor(previous: &Vec<Room>)->Vec<Room>{
 }
 pub fn render_rooms(rooms: &Vec<Room>, handle: &mut RaylibDrawHandle){
     for i in rooms{
-        if !is_degen_room(i, rooms){
-            i.render(handle);
-        }
+        i.render(handle);
     }
 }
 pub fn _render_rooms_debug(rooms: &Vec<Room>,prev_floor:&Vec<Room>, handle: &mut RaylibDrawHandle){
@@ -450,125 +433,7 @@ pub fn _render_rooms_debug(rooms: &Vec<Room>,prev_floor:&Vec<Room>, handle: &mut
         i._render_debug(prev_floor, handle);
     }
 }
-fn get_point_idx(loc:Vector2,floor:&Vec<Room>)->Option<usize>{
-    for i in 0..floor.len(){
-        if floor[i].inside(loc){
-            return Some(i);
-        }
-    }
-    return None;
-}
-pub fn get_top_neighbors(room:usize, floor:&Vec<Room>)->Vec<usize>{
-        let of = 2;
-        let r =&floor[room];
-        let mut top:Vec<usize> =Vec::new();
-        let mut current = r.x;
-        loop{
-            if current>r.x+r.width{
-                break;
-            }
-            let s = get_point_idx(to_vec(current, r.y-of), floor);
-            match s{
-                Some(idx)=>{
-                    top.push(idx);
-                    if floor[idx].x+floor[idx].width>current{
-                        current = floor[idx].x+floor[idx].width+1;
-                    }
-                    current += 1;
-                }
-                None=>{
-                    current += 1;
-                }
-            }
-        }
-        println!("returned");
-       return top;
-}
-pub fn get_left_neighbors(room:usize, floor:&Vec<Room>)->Vec<usize>{
-        let of = 2;
-        let r =&floor[room];
-        let mut left:Vec<usize> = Vec::new();
-        let mut current = r.y;
-        loop{
-            if current>r.y+r.height{
-                break;
-            }
-            let s = get_point_idx(to_vec(r.x-of, r.y+r.height), floor); 
-            match s{
-                Some(idx)=>{
-                left.push(idx);
-                if floor[idx].x+floor[idx].width>current{
-                    current = floor[idx].x+floor[idx].width+1;
-                }
-                current += 1;
-                }
-                None=>{
-                    current += 1;
-                }
-            }
-        }
-        return left;
-}
-pub fn get_right_neighbors(room:usize, floor:&Vec<Room>)->Vec<usize>{
-        let of = 2;
-        let r =&floor[room];
-        let mut right:Vec<usize> = Vec::new();
-        let mut current = r.y;
-        loop{
-            if current>r.y+r.height{
-                break;
-            }
-            let s = get_point_idx(to_vec(r.x+r.width+of, r.y+r.height), floor); 
-            match s{
-                Some(idx)=>{
-                right.push(idx);
-                if floor[idx].x+floor[idx].width>current{
-                    current = floor[idx].x+floor[idx].width+1;
-                }
-                current += 1;
-                }
-                None=>{
-                    current += 1;
-                }
-            }
-        }
-        return right;
-}
-pub fn get_bottom_neighbors(room:usize, floor:&Vec<Room>)->Vec<usize>{
-        let of = 2;
-        let mut bottom:Vec<usize> =Vec::new();
-        let r =&floor[room];
-        let mut current = r.x;
-        loop{
-            if current>r.x+r.width{
-                break;
-            }
-            let s = get_point_idx(to_vec(current, r.y+r.height+of), floor);
-            match s{
-                Some(idx)=>{
-                    bottom.push(idx);
-                    if floor[idx].x+floor[idx].width>current{
-                        current = floor[idx].x+floor[idx].width+1;
-                    }
-                    current += 1;
-                }
-                None=>{
-                    current += 1;
-                }
-            }
-        }
-        return bottom;
-}
-pub fn get_neighbors(room:usize, floor:&Vec<Room>)->Vec<usize>{
-    let mut out = vec![];
-    let r =&floor[room];
-    out.append(&mut get_top_neighbors(room, floor));
-    out.append(&mut get_right_neighbors(room, floor));
-    out.append(&mut get_left_neighbors(room, floor));
-    out.append(&mut get_bottom_neighbors(room, floor));
-    return out;
-}
-fn contains(idx:usize, vec:&Vec<usize>)->bool{
+fn _contains(idx:usize, vec:&Vec<usize>)->bool{
     for a in vec{
         if *a == idx{
             return true;
@@ -576,23 +441,4 @@ fn contains(idx:usize, vec:&Vec<usize>)->bool{
     }
     return false;
 }
-//returns the direction from r0 to r1
-pub fn get_relative_direction( r0:usize, r1:usize, floor:&Vec<Room>)->Option<Direction>{
-    let t = get_top_neighbors(r0, floor);
-    if contains(r1, &t){
-        return Some(Direction::Top);
-    }
-    let b = get_bottom_neighbors(r0, floor);
-    if contains(r1, &b){
-        return Some(Direction::Bottom);
-    }
-    let r = get_right_neighbors(r0, floor);
-    if contains(r1, &r){
-        return Some(Direction::Right);
-    }
-    let l = get_left_neighbors(r0, floor);
-    if contains(r1, &l){
-        return Some(Direction::Left);
-    }
-    return None;
-}
+
