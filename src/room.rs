@@ -19,6 +19,7 @@ pub struct Room{
     pub width:i32,
 }
 
+
 impl Clone for Room{
     fn clone(&self)->Self {
         return Room{x:self.x, y:self.y, height:self.height,width:self.width};
@@ -50,8 +51,8 @@ impl Room{
     }
     pub fn render(&self,handle: &mut RaylibDrawHandle){
         utils::draw_rectangle(handle, self.x, self.y, self.height, self.width);
-        let c = self.center();
-        handle.draw_circle(c.0, c.1, 5.0, Color::RED);
+        //let c = self.center();
+        //handle.draw_circle(c.0, c.1, 5.0, Color::RED);
     }
     pub fn _render_debug(&self, selves:&Vec<Self>,handle:&mut RaylibDrawHandle){
         utils::draw_rectangle(handle, self.x, self.y, self.height, self.width);
@@ -99,7 +100,7 @@ impl Clone for TreeRoom{
         return Self{ x: self.x, y: self.y, height:self.height, width:self.width, dropped:self.dropped, child_1:obtr_clone(&self.child_1), child_2:obtr_clone(&self.child_2)}
     }
 }
-fn inside_set(point:Vector2, set: &Vec<Room>,ignore: &Room)->bool{
+pub fn inside_set(point:Vector2, set: &Vec<Room>,ignore: &Room)->bool{
     for i in  set{
         if i.is_equal(ignore){
             continue;
@@ -176,17 +177,17 @@ impl TreeRoom {
         let dy :f64 = (cy-(config::SCREEN_HEIGHT/2) as f64)*(cy-(config::SCREEN_HEIGHT/2) as f64);
         return( dx+dy).sqrt() as i32;
     }
-    fn split_x(&mut self, breadth: i32){
-        let split : i32 = utils::generate_toward_mid(self.width/2-breadth, self.width/2+breadth,2);
+    fn split_x(&mut self, breadth: i32, confg:&config::Config){
+        let split : i32 = confg.normalize(utils::generate_toward_mid(self.width/2-breadth, self.width/2+breadth,2));
         self.child_1 = Some(Box::new(TreeRoom::new(self.x, self.y,self.height, split)));
         self.child_2 = Some(Box::new(TreeRoom::new(self.x+split, self.y, self.height, self.width-split)));
     }
-    fn split_y(&mut self, breadth: i32){
-        let split : i32 = utils::generate_toward_mid(self.height/2-breadth, self.height/2+breadth,2);
+    fn split_y(&mut self, breadth: i32, confg:&config::Config){
+        let split : i32 = confg.normalize(utils::generate_toward_mid(self.height/2-breadth, self.height/2+breadth,2));
         self.child_1 = Some(Box::new(TreeRoom::new(self.x, self.y,split, self.width)));
         self.child_2 =Some(Box::new(TreeRoom::new(self.x, self.y+split, self.height-split, self.width)));
     }
-    pub fn split_recurse(&mut self, max_depth:usize, depth:usize){
+    pub fn split_recurse(&mut self, max_depth:usize, depth:usize, confg:&config::Config){
         if depth>max_depth{
             return;
         }
@@ -211,9 +212,9 @@ impl TreeRoom {
             }
             if rat>1.2|| rat2>1.2 {
                 if rat>rat2{
-                    self.split_y(breadth);
+                    self.split_y(breadth, confg);
                 } else{
-                    self.split_x(breadth);
+                    self.split_x(breadth, confg);
                 }
             } else {
                 if depth >= max_depth-2{
@@ -222,24 +223,24 @@ impl TreeRoom {
                     }
                 }
                 if utils::random()%2 == 0{
-                    self.split_x(breadth);
+                    self.split_x(breadth, confg);
                 } else{
-                    self.split_y(breadth);
+                    self.split_y(breadth,confg);
                 }
             }
 
         }
         if self.child_1.is_some(){
             //self.child_1.as_mut().as_mut().unwrap().split_recurse(max_depth, depth+1);
-            self.child_1.as_mut().unwrap().split_recurse(max_depth, depth+1);
+            self.child_1.as_mut().unwrap().split_recurse(max_depth, depth+1, confg);
         }
         if self.child_2.is_some(){
             //self.child_2.as_mut().as_mut().unwrap().split_recurse(max_depth, depth+1);
-            self.child_2.as_mut().unwrap().split_recurse(max_depth, depth+1);
+            self.child_2.as_mut().unwrap().split_recurse(max_depth, depth+1, confg);
         }
     }
-    pub fn split(&mut self, max_depth:usize){
-        self.split_recurse(max_depth, 0);
+    pub fn split(&mut self, max_depth:usize, confg:&config::Config ){
+        self.split_recurse(max_depth, 0, confg);
     }
     pub fn _render(&self, handle: &mut RaylibDrawHandle){
         if self.is_bottom(){
@@ -410,15 +411,15 @@ pub fn purge_not_on_top(modified:&Vec<Room>, base: &Vec<Room> )->Vec<Room>{
     }
     return out;
 }
-pub fn _new_building(radmin:usize, radmax:usize) ->Vec<Room>{
+pub fn _new_building(radmin:usize, radmax:usize,confg:&config::Config) ->Vec<Room>{
     let mut r = TreeRoom::new(0,0, 800, 800);
-    r.split(8);
+    r.split(8, confg);
     r.drop_random(0, radmin as i32, radmax as i32);
     return r.flatten();
 }
-pub fn _new_floor(previous: &Vec<Room>)->Vec<Room>{
+pub fn _new_floor(previous: &Vec<Room>, confg:&config::Config)->Vec<Room>{
     let mut r = TreeRoom::new(0,0, 800, 800);
-    r.split(8);
+    r.split(8, confg);
     let tout = r.flatten();
     let out = purge_not_on_top(&tout,previous);
     return out;

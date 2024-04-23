@@ -14,10 +14,10 @@ fn main() {
         let mut b: building::Building = building::generate_building(num_rooms, num_floors);
     }
     */
-    let num_floors = 1;
+    let num_floors = 3;
     let num_rooms = 32;
-    let mut b: building::Building = building::generate_building(num_rooms, num_floors);
-    b.scale(6.0);
+    let confg= config::Config{cell_size:25.0, scale_size:5.0};
+    let mut b: building::Building = building::generate_building(num_rooms, num_floors,&confg);
     raylib::set_trace_log(TraceLogLevel::LOG_ERROR);
     let (mut rl, thread) = raylib::init()
         .size(config::SCREEN_WIDTH, config::SCREEN_HEIGHT)
@@ -39,8 +39,7 @@ fn main() {
             }
         }
         if rl.is_key_pressed(KeyboardKey::KEY_W){
-            b= building::generate_building(num_rooms, num_floors);
-            b.scale(5.0);
+            b= building::generate_building(num_rooms, num_floors, &confg);
             floor = 0;
         }
         let mut d = rl.begin_drawing(&thread);

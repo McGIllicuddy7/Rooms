@@ -1,4 +1,5 @@
 use crate::{room::Room, utils};
+use crate::room;
 use raylib::prelude::Vector2;
 #[derive(Debug)]
 pub enum Direction {
@@ -10,38 +11,51 @@ pub struct Portal{
     pub location:Vector2,
     pub dir:Direction,
 }
+pub struct Stair{
+    pub top:i32, 
+    pub bot:i32,
+    pub location:Vector2,
+}
 fn generate_midpoint(amin:i32, amax:i32, bmin:i32, bmax:i32)->Option<i32>{
+   // assert!(amin<amax);
+    //assert!(bmin<bmax);
     if !inside(amin, amax,amax, bmin){
         return None;
-    }
-    let amn:i32;
-    let bmn:i32;
-    let amx:i32;
-    let bmx:i32;
-    if amin<bmin{
-        amn = bmin;
-        amx = bmax;
-        bmn = amin;
-        bmx = amax;
+    } 
+    let lmin:i32;
+    let lmax:i32;
+    let smin:i32;
+    let smax:i32;
+    if (amax-amin)>(bmax-bmin){
+        lmin = amin;
+        lmax = amax;
+        smin = bmin;
+        smax = bmax;
     } else{
-        amn = amin;
-        amx = amax;
-        bmn = bmin;
-        bmx = bmax;
+        lmin =bmin;
+        lmax = bmax;
+        smin = amin;
+        smax = amax;
     }
-    if amx<=bmn{
+    let mut min_inter:i32 = -1;
+    let mut max_inter:i32 = -1; 
+    let mut current = lmin;
+    while current<=lmax{
+        if current>=smin && current<=smax{
+            if min_inter == -1{
+                min_inter = current;
+            }
+            max_inter = current;
+        }
+        current+=1;
+    }
+    if min_inter == -1{
         return None;
     }
-    if amx<=bmx{
-        return Some((amn+amx)/2);
-    } else{
-        if bmx>amax{
-            return Some((bmn+amx)/2);
-        }
-        else{
-            return Some((bmn+bmx)/2);
-        }
+    if (max_inter-min_inter)<4{
+        return None;
     }
+    return Some((max_inter+min_inter)/2);
 }
 impl Portal{
     //direction from idx1 to idx2
@@ -69,7 +83,7 @@ impl Portal{
             }
             Direction::Right=>{
                 if let Some(mid) = generate_midpoint(r1.y, r1.y+r1.height, r2.y, r2.y+r2.height){
-                    location = Vector2{x:(r1.x+r1.width) as f32,y: mid as f32};
+                    location = Vector2{x:(r2.x) as f32,y: mid as f32};
                 }
                 else{
                     return None;
@@ -91,7 +105,7 @@ fn near(a:i32, b:i32)->bool{
     return a == b || a+1 == b || a-1 == b;
 }
 fn inside(ab:i32,ae:i32, bb:i32,be:i32)->bool{
-    return (ab >=bb && ab<=be ||ae>=bb && ae<=be) || (bb >=ab && bb<=ae ||be>=ab && be<=ae);
+    return (ab >=bb && ab<=be ||ae>=bb && ae<=be) || (ae>=be && ab<= bb);
 }
 fn shared_border(r0:&Room, r1:&Room)->Option<Direction>{
     if near(r0.x, r1.x+r1.width){
@@ -116,15 +130,18 @@ fn shared_border(r0:&Room, r1:&Room)->Option<Direction>{
     }
     return None;
 }
-pub fn calc_doors(floor:&Vec<Room>)->Vec<Portal> {
+fn calc_doors_floor(floor:&Vec<Room>)->Vec<Portal> {
     let mut out = vec![];
     let mut reached = vec![];
     for _ in 0..floor.len(){
         reached.push(false);
     }
     for i in 0..floor.len(){
-        for j in i+1..floor.len(){
-            if reached[j] && utils::random()%3 != 0{
+        for j in 0..floor.len(){
+            if i == j{
+                continue;
+            }
+            if reached[i] && reached[j] && utils::random()%3 == 0{
                 continue;
             }
             let shared = shared_border(&floor[i], &floor[j]);
@@ -133,11 +150,55 @@ pub fn calc_doors(floor:&Vec<Room>)->Vec<Portal> {
                 let portal = Portal::link(floor, i as i32,j as i32, dir);
                 if portal.is_some(){
                     out.push(portal.unwrap());
+                    reached[i] = true;
+                    reached[j] = true;
                 }
-                reached[j] = true;
-                reached[i] = true;
-            }
+            } 
         }
+    }
+    return out;
+}
+pub fn calc_doors(building:&Vec<Vec<Room>>)->Vec<Vec<Portal>>{
+    let mut out = vec![];
+    for i in 0..building.len(){
+        out.push(calc_doors_floor(&building[i]));
+    }
+    return out;
+}
+pub fn calc_stairs_floor(f0:&Vec<Room>, f1:&Vec<Room>, floor:i32)->Vec<Stair>{
+    if f1.len() == 0{
+        return vec![];
+    }
+    let count:usize;
+    let frac = 5;
+    if f1.len() <frac*2{
+        count = 2;
+    }
+    else{
+        count = f1.len()/2;
+    }
+    let mut out = vec![];
+    for _ in 0..count{
+        loop{
+            let idx = utils::random()%f1.len();
+            let loc = f1[idx].center();
+            let lv = Vector2{x:loc.0 as f32, y: loc.1 as f32};
+            let tmp = Stair{bot:floor-1, top:floor,location:lv};
+            if !room::inside_set(lv, f0, &f1[0]){
+                continue;
+            }
+            out.push(tmp);
+            break;
+        }
+
+    }
+    return out;
+}
+pub fn calc_stairs(building:&Vec<Vec<Room>>)->Vec<Stair>{
+    let mut out = vec![];
+    for i in 1..building.len(){
+        let mut p = calc_stairs_floor(&building[i-1],&building[i],i as i32);
+        out.append(&mut p);
     }
     return out;
 }
