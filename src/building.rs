@@ -8,8 +8,7 @@ use std::thread;
 use layout::Direction;
 use layout::Portal;
 use layout::Stair;
-
-
+use trustme::*;
 pub struct Building{
     pub floors: Vec<Vec<room::Room>>,
     pub stairs: Vec<Stair>,
@@ -312,15 +311,17 @@ impl Building{
             rust_raylib::ffi::ExportImage(image, tmp.as_ptr() as *const i8);
     }
     pub fn render_out(&self, name:&str){
-        unsafe{
+        trustme!{
             let s = "testing 1 2 3";
             rust_raylib::ffi::SetTraceLogLevel(rust_raylib::ffi::TraceLogLevel::None as i32);
             rust_raylib::ffi::InitWindow(1000, 1000, s.as_ptr() as *const i8);
         }
         for i in 0..self.num_floors(){
-            unsafe{
+        trustme!{
                 self.render_floor_out(i, name);
             }
         }
     }
 }
+
+  

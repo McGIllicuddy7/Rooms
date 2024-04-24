@@ -160,6 +160,7 @@ dependencies = [
  "rand",
  "raylib",
  "rust-raylib",
+ "trustme",
 ]
 
 [[package]]
@@ -230,6 +231,12 @@ dependencies = [
  "quote",
  "unicode-ident",
 ]
+
+[[package]]
+name = "trustme"
+version = "1.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "37fbb5d0dc9f4e8a7981e4e4686ebad0f40a3f1adf0d2e0eae86a2972c23ed61"
 
 [[package]]
 name = "unicode-ident"

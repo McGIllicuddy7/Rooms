@@ -1,6 +1,7 @@
 
 use crate::utils;
 use crate::config;
+use trustme::*;
 use raylib::{prelude::*, math::Vector2};
 
 pub struct TreeRoom{
@@ -55,7 +56,7 @@ impl Room{
         //handle.draw_circle(c.0, c.1, 5.0, Color::RED);
     }
     pub fn render_unsafe(&self){
-        unsafe{
+        trustme!{
             utils::draw_rectangle_unsafe(self.x, self.y, self.height, self.width);
         }
         //let c = self.center();
