@@ -8,3 +8,4 @@ edition = "2021"
 [dependencies]
 rand = "0.8.5"
 raylib = "3.7.0"
+rust-raylib = "0.45.11"

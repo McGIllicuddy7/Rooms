@@ -54,6 +54,13 @@ impl Room{
         //let c = self.center();
         //handle.draw_circle(c.0, c.1, 5.0, Color::RED);
     }
+    pub fn render_unsafe(&self){
+        unsafe{
+            utils::draw_rectangle_unsafe(self.x, self.y, self.height, self.width);
+        }
+        //let c = self.center();
+        //handle.draw_circle(c.0, c.1, 5.0, Color::RED);
+    }
     pub fn _render_debug(&self, selves:&Vec<Self>,handle:&mut RaylibDrawHandle){
         utils::draw_rectangle(handle, self.x, self.y, self.height, self.width);
         let cs = self.corners();

@@ -6,9 +6,20 @@ pub fn draw_rectangle(handle: &mut RaylibDrawHandle, x:i32, y:i32, height:i32, w
     handle.draw_line(x, cy+height,x+width, cy+height ,Color::BLACK);
     handle.draw_line(x+width, cy,x+width, cy+height ,Color::BLACK);
 }
+pub unsafe fn draw_rectangle_unsafe(x:i32, y:i32, height:i32,width:i32){
+    let cy =y;
+    rust_raylib::ffi::DrawLine(x, cy,x+width, cy ,rust_raylib::ffi::colors::BLACK);
+    rust_raylib::ffi::DrawLine(x, cy,x, cy+height ,rust_raylib::ffi::colors::BLACK);
+    rust_raylib::ffi::DrawLine(x, cy+height,x+width, cy+height ,rust_raylib::ffi::colors::BLACK);
+    rust_raylib::ffi::DrawLine(x+width, cy,x+width, cy+height ,rust_raylib::ffi::colors::BLACK);
+}
 pub fn draw_rectangle_centered(handle:&mut RaylibDrawHandle, center:&Vector2, height:i32, width:i32){
     let c = (*center)-Vector2{x:(width/2 )as f32, y:(height/2) as f32};
     handle.draw_rectangle_v(c, Vector2{x:width as f32, y:height as f32}, Color::BLACK);
+}
+pub unsafe fn draw_rectangle_centered_unsafe(center:&Vector2, height:i32, width:i32){
+    let c = (*center)-Vector2{x:(width/2 )as f32, y:(height/2) as f32};
+    rust_raylib::ffi::DrawRectangle(c.x as i32, c.y as i32, width, height, rust_raylib::ffi::colors::BLACK);
 }
 pub fn random() ->usize{
     rand::random::<usize>()

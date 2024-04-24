@@ -187,7 +187,6 @@ impl Building{
         }
         if self.doors.len()>floor{
         for d in &self.doors[floor]{
-            handle.draw_circle_v(d.location, 4 as f32, Color::BLUE);
             match d.dir{
                 Direction::Top |Direction::Bottom =>{
                     utils::draw_rectangle_centered(handle, &d.location, 9,18);
@@ -238,7 +237,7 @@ impl Building{
             handle.draw_text(&msg, s.location.x as i32, s.location.y as i32 +20,12, Color::BLACK);
         }
     }
-    pub fn _num_floors(&self)->usize{
+    pub fn num_floors(&self)->usize{
         return self.floors.len();
     }
     pub fn scale(&mut self, scale:f64){
@@ -264,6 +263,64 @@ impl Building{
         for j in &mut self.stairs{
             let delta = j.location-(Vector2{x:x as f32, y:y as f32});
             j.location = delta.scale_by(scale as f32)+(Vector2{x:x as f32, y:y as f32});
+        }
+    }
+    unsafe fn render_floor_out(&self, floor:usize, name:&str){
+            let texture = rust_raylib::ffi::LoadRenderTexture(1000, 1000);
+            {
+            rust_raylib::ffi::BeginTextureMode(texture.clone());
+            rust_raylib::ffi::ClearBackground(rust_raylib::ffi::colors::WHITE);
+            for f in &self.floors[floor]{
+               f.render_unsafe();
+            }
+            for i in 0..self.floors[floor].len(){
+                let text = format!("{}", i);
+                let c = self.floors[floor][i].center();
+                rust_raylib::ffi::DrawText(text.as_str().as_ptr() as *const i8,c.0,c.1-16, 16, rust_raylib::ffi::colors::BLACK);
+            }}
+            for s in &self.stairs{
+                let mut other:i32 =-1;
+                if s.top == floor as i32{
+                    other = s.bot as i32;
+                }
+                if s.bot == floor as i32{
+                    other = s.top as i32;
+                }
+                if other == -1{
+                    continue;
+                }
+                let stext = vec!['S','\0'];
+                rust_raylib::ffi::DrawText(stext.as_ptr() as *const i8, s.location.x as i32, s.location.y as i32,24, rust_raylib::ffi::colors::BLACK);
+                let msg = format!("to {}", other);
+                rust_raylib::ffi::DrawText(msg.as_ptr() as *const i8, s.location.x as i32, s.location.y as i32 +20,8, rust_raylib::ffi::colors::BLACK);
+            }
+            for d in &self.doors[floor]{
+                match d.dir{
+                    Direction::Top |Direction::Bottom =>{
+                        utils::draw_rectangle_centered_unsafe(&d.location, 9,18);
+                    }
+                    Direction::Right |Direction::Left=>{
+                        utils::draw_rectangle_centered_unsafe(&d.location, 18, 9);
+                    }
+                }
+            }
+            rust_raylib::ffi::EndTextureMode();
+            let mut image = rust_raylib::ffi::LoadImageFromTexture(texture.texture);
+            rust_raylib::ffi::ImageFlipVertical(&mut image);
+            let s = format!("output/{}{}.png", name, floor);
+            let tmp = &s;
+            rust_raylib::ffi::ExportImage(image, tmp.as_ptr() as *const i8);
+    }
+    pub fn render_out(&self, name:&str){
+        unsafe{
+            let s = "testing 1 2 3";
+            rust_raylib::ffi::SetTraceLogLevel(rust_raylib::ffi::TraceLogLevel::None as i32);
+            rust_raylib::ffi::InitWindow(1000, 1000, s.as_ptr() as *const i8);
+        }
+        for i in 0..self.num_floors(){
+            unsafe{
+                self.render_floor_out(i, name);
+            }
         }
     }
 }
