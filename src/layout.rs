@@ -190,7 +190,7 @@ fn calc_doors_floor(floor:&Vec<Room>, first_floor:bool)->Vec<Portal> {
         return out;
     }
     let mut count = 0;
-    let max_count = utils::random()%(floor.len()/2);
+    let max_count = floor.len();
     loop{
         let mut idx = (utils::random()%4) as i32;
         let mut dir:Direction = Direction::Top;
@@ -227,16 +227,20 @@ fn calc_doors_floor(floor:&Vec<Room>, first_floor:bool)->Vec<Portal> {
             break;
         }
         let location:Vector2 ;
+        let normal:Vector2;
         let r = &floor[room_idx];
         let x = r.x as f32;
         let y = r.y as f32;
         let w = r.width as f32;
         let h = r.height as f32;
         match dir{
-            Direction::Top=>{location = Vector2 { x: x+w/2.0, y:y };}
-            Direction::Left=>{location = Vector2 { x: x, y:y+h/2.0 };}
-            Direction::Right=>{location = Vector2 { x: x+w, y:y+h/2.0 };}
-            Direction::Bottom=>{location = Vector2 { x: x+w/2.0, y:y };}
+            Direction::Top=>{location = Vector2 { x: x+w/2.0, y:y }; normal = Vector2{x:0.0,y:1.0};}
+            Direction::Left=>{location = Vector2 { x: x, y:y+h/2.0 };normal = Vector2{x:-1.0,y:0.0};}
+            Direction::Right=>{location = Vector2 { x: x+w, y:y+h/2.0 };normal = Vector2{x:1.0,y:0.0};}
+            Direction::Bottom=>{location = Vector2 { x: x+w/2.0, y:y+h };normal = Vector2{x:0.0,y:-1.0};}
+        }
+        if room::inside_set(location+normal*10.0, floor, r){
+            continue;
         }
         out.push(Portal { idx1: room_idx as i32, idx2: room_idx as i32, location: location, dir: dir });
         count += 1;
@@ -249,7 +253,7 @@ fn calc_doors_floor(floor:&Vec<Room>, first_floor:bool)->Vec<Portal> {
 pub fn calc_doors(building:&Vec<Vec<Room>>)->Vec<Vec<Portal>>{
     let mut out = vec![];
     for i in 0..building.len(){
-        out.push(calc_doors_floor(&building[i], i == 0));
+        out.push(calc_doors_floor(&building[i], 1 == 0));
     }
     return out;
 }

@@ -2,7 +2,7 @@
 use raylib::drawing::RaylibDrawHandle;
 use raylib::prelude::Vector2;
 use raylib::prelude::*;
-use crate::{config::{self, DEBUG_TIMING}, room::{self, purge_not_on_top, TreeRoom}, layout, utils};
+use crate::{config::{self, DEBUG_TIMING}, layout, room::{self, inside_set, purge_not_on_top, TreeRoom}, utils};
 use std:: time::Instant;
 use std::thread;
 use layout::Direction;
@@ -266,9 +266,11 @@ impl Building{
     }
     unsafe fn render_floor_out(&self, floor:usize, name:&str){
             let texture = rust_raylib::ffi::LoadRenderTexture(1000, 1000);
+            let bg = generate_background(&self.floors[floor]);
             {
             rust_raylib::ffi::BeginTextureMode(texture.clone());
             rust_raylib::ffi::ClearBackground(rust_raylib::ffi::colors::WHITE);
+            rust_raylib::ffi::DrawTexture(bg.texture.clone(),0,0 , rust_raylib::ffi::colors::WHITE);
             for f in &self.floors[floor]{
                f.render_unsafe();
             }
@@ -304,6 +306,7 @@ impl Building{
                 }
             }
             rust_raylib::ffi::EndTextureMode();
+            rust_raylib::ffi::UnloadRenderTexture(bg);
             let mut image = rust_raylib::ffi::LoadImageFromTexture(texture.texture);
             rust_raylib::ffi::ImageFlipVertical(&mut image);
             let s = format!("output/{}{}.png", name, floor);
@@ -323,5 +326,30 @@ impl Building{
         }
     }
 }
-
-  
+fn to_vec_2(x:i32, y:i32)->Vector2{
+    return Vector2 { x: x as f32, y: y as f32};
+}
+unsafe fn generate_background(floor:&Vec<room::Room>)->rust_raylib::ffi::RenderTexture2D{
+    use rust_raylib::ffi::*;
+    let out = LoadRenderTexture(config::SCREEN_WIDTH, config::SCREEN_HEIGHT);
+    {
+    BeginTextureMode(out.clone());
+    ClearBackground(colors::BLACK);
+    let fs = room::Room{x:0, y:0, height:0, width:0};
+    for x in 0..config::SCREEN_WIDTH{
+        for y in 0..config::SCREEN_HEIGHT{
+            if inside_set(to_vec_2(x, y),floor,&fs ){
+                DrawPixel(x, y,colors::WHITE);
+            } else{
+                DrawPixel(x, y, colors::GREEN);
+            }
+        }
+    }
+    EndTextureMode();}
+    let b = out.clone();
+    let i = LoadImageFromTexture(b.texture);
+    let s = "debug.png";
+    ExportImage(i.clone(), s.as_ptr() as *const i8);
+    UnloadImage(i);
+    return out;
+}

@@ -14,7 +14,7 @@ fn main() {
         let mut b: building::Building = building::generate_building(num_rooms, num_floors);
     }
     */
-    let num_floors = 3;
+    let num_floors = 1;
     let num_rooms = 32;
     let confg= config::Config{cell_size:25.0, scale_size:5.0};
     let mut b: building::Building = building::generate_building(num_rooms, num_floors,&confg);
