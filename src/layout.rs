@@ -1,3 +1,5 @@
+
+
 use crate::{room::Room, utils};
 use crate::room;
 use raylib::prelude::Vector2;
@@ -130,30 +132,116 @@ fn shared_border(r0:&Room, r1:&Room)->Option<Direction>{
     }
     return None;
 }
-fn calc_doors_floor(floor:&Vec<Room>)->Vec<Portal> {
+fn calc_doors_floor(floor:&Vec<Room>, first_floor:bool)->Vec<Portal> {
     let mut out = vec![];
     let mut reached = vec![];
     for _ in 0..floor.len(){
         reached.push(false);
     }
+    let mut potential_tops = vec![];
+    let mut potential_bots = vec![];
+    let mut potential_lefts = vec![];
+    let mut potential_rights = vec![];
     for i in 0..floor.len(){
+        let mut top = false;
+        let mut bot = false;
+        let mut left = false;
+        let mut right = false;
         for j in 0..floor.len(){
             if i == j{
-                continue;
-            }
-            if reached[i] && reached[j] && utils::random()%3 == 0{
                 continue;
             }
             let shared = shared_border(&floor[i], &floor[j]);
             if shared.is_some(){
                 let dir = shared.unwrap();
+                match dir {
+                    Direction::Top=> {top = true;}
+                    Direction::Bottom=>{bot = true;}
+                    Direction::Left=>{left = true;}
+                    Direction::Right=>{right= true;}
+
+                }
+                if reached[i] && reached[j] && utils::random()%3 == 0{
+                    continue;
+                }
                 let portal = Portal::link(floor, i as i32,j as i32, dir);
                 if portal.is_some(){
                     out.push(portal.unwrap());
+                    
                     reached[i] = true;
                     reached[j] = true;
                 }
             } 
+        }
+        if !top{
+            potential_tops.push(i);
+        }
+        if !bot{
+            potential_bots.push(i);
+        }
+        if !left{
+            potential_lefts.push(i);
+        }
+        if !right{
+            potential_rights.push(i);
+        }
+    }
+    if !first_floor{
+        return out;
+    }
+    let mut count = 0;
+    let max_count = utils::random()%(floor.len()/2);
+    loop{
+        let mut idx = (utils::random()%4) as i32;
+        let mut dir:Direction = Direction::Top;
+        let mut room_idx:usize = 0;
+        if idx == 0{
+            if potential_tops.len() == 0{
+                idx+=1;
+            }
+            dir = Direction::Top;
+            room_idx = utils::random()%potential_tops.len();
+        }
+        if idx == 1{
+            if potential_bots.len() == 0{
+                idx+=1;
+            }
+            dir = Direction::Bottom;
+            room_idx = utils::random()%potential_bots.len();
+        }
+        if idx == 2{
+            if potential_rights.len() == 0{
+                idx+=1;
+            }
+            dir = Direction::Right;
+            room_idx = utils::random()%potential_rights.len();
+        }
+        if idx == 3{
+            if potential_lefts.len() == 0{
+                idx = -1;
+            }
+            dir = Direction::Left;
+            room_idx = utils::random()%potential_lefts.len();
+        }
+        if idx == -1{
+            break;
+        }
+        let location:Vector2 ;
+        let r = &floor[room_idx];
+        let x = r.x as f32;
+        let y = r.y as f32;
+        let w = r.width as f32;
+        let h = r.height as f32;
+        match dir{
+            Direction::Top=>{location = Vector2 { x: x+w/2.0, y:y };}
+            Direction::Left=>{location = Vector2 { x: x, y:y+h/2.0 };}
+            Direction::Right=>{location = Vector2 { x: x+w, y:y+h/2.0 };}
+            Direction::Bottom=>{location = Vector2 { x: x+w/2.0, y:y };}
+        }
+        out.push(Portal { idx1: room_idx as i32, idx2: room_idx as i32, location: location, dir: dir });
+        count += 1;
+        if count>=max_count{
+            break;
         }
     }
     return out;
@@ -161,7 +249,7 @@ fn calc_doors_floor(floor:&Vec<Room>)->Vec<Portal> {
 pub fn calc_doors(building:&Vec<Vec<Room>>)->Vec<Vec<Portal>>{
     let mut out = vec![];
     for i in 0..building.len(){
-        out.push(calc_doors_floor(&building[i]));
+        out.push(calc_doors_floor(&building[i], i == 0));
     }
     return out;
 }
