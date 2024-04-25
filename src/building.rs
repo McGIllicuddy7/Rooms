@@ -264,9 +264,9 @@ impl Building{
             j.location = delta.scale_by(scale as f32)+(Vector2{x:x as f32, y:y as f32});
         }
     }
-    unsafe fn render_floor_out(&self, floor:usize, name:&str){
+    unsafe fn render_floor_out(&self, floor:usize, name:&str, confg:&config::Config){
             let texture = rust_raylib::ffi::LoadRenderTexture(1000, 1000);
-            let bg = generate_background(&self.floors[floor]);
+            let bg = generate_background(&self.floors[floor], confg);
             {
             rust_raylib::ffi::BeginTextureMode(texture.clone());
             rust_raylib::ffi::ClearBackground(rust_raylib::ffi::colors::WHITE);
@@ -313,7 +313,7 @@ impl Building{
             let tmp = &s;
             rust_raylib::ffi::ExportImage(image, tmp.as_ptr() as *const i8);
     }
-    pub fn render_out(&self, name:&str){
+    pub fn render_out(&self, name:&str,confg:&config::Config ){
         trustme!{
             let s = "testing 1 2 3";
             rust_raylib::ffi::SetTraceLogLevel(rust_raylib::ffi::TraceLogLevel::None as i32);
@@ -321,7 +321,7 @@ impl Building{
         }
         for i in 0..self.num_floors(){
         trustme!{
-                self.render_floor_out(i, name);
+                self.render_floor_out(i, name,confg);
             }
         }
     }
@@ -329,27 +329,40 @@ impl Building{
 fn to_vec_2(x:i32, y:i32)->Vector2{
     return Vector2 { x: x as f32, y: y as f32};
 }
-unsafe fn generate_background(floor:&Vec<room::Room>)->rust_raylib::ffi::RenderTexture2D{
+fn sample_wood_texture(x:i32, y:i32)->rust_raylib::ffi::Color{
+    if x%25 == 0 || y%25 == 0{
+        return rust_raylib::ffi::colors::BLACK;
+    }
+    return rust_raylib::ffi::Color{r:60, g:40, b:0, a:255};
+}
+fn sample_ground_texture(x:i32, y:i32)->rust_raylib::ffi::Color{
+    if x%25 == 0 || y%25 == 0{
+        return rust_raylib::ffi::colors::BLACK;
+    }
+    return rust_raylib::ffi::Color{r:0, g:125, b:0, a:255};
+}
+unsafe fn generate_background(floor:&Vec<room::Room>, confg:&config::Config)->rust_raylib::ffi::RenderTexture2D{
     use rust_raylib::ffi::*;
     let out = LoadRenderTexture(config::SCREEN_WIDTH, config::SCREEN_HEIGHT);
     {
     BeginTextureMode(out.clone());
-    ClearBackground(colors::BLACK);
+    ClearBackground(colors::WHITE);
     let fs = room::Room{x:0, y:0, height:0, width:0};
     for x in 0..config::SCREEN_WIDTH{
         for y in 0..config::SCREEN_HEIGHT{
-            if inside_set(to_vec_2(x, y),floor,&fs ){
-                DrawPixel(x, y,colors::WHITE);
-            } else{
-                DrawPixel(x, y, colors::GREEN);
+            if (x%(confg.cell_size as i32) == 0 || y%(confg.cell_size as i32)== 0) && confg.render_grid{
+                DrawPixel(x, config::SCREEN_HEIGHT-y, rust_raylib::ffi::colors::BLACK);
+            } else if confg.render_background{
+                if inside_set(to_vec_2(x, y),floor,&fs ){
+                    let c = sample_wood_texture(x, y);
+                    DrawPixel(x, config::SCREEN_HEIGHT-y,c);
+                } else{
+                    let c = sample_ground_texture(x, y);
+                    DrawPixel(x, config::SCREEN_HEIGHT-y, c);
+                }
             }
         }
     }
     EndTextureMode();}
-    let b = out.clone();
-    let i = LoadImageFromTexture(b.texture);
-    let s = "debug.png";
-    ExportImage(i.clone(), s.as_ptr() as *const i8);
-    UnloadImage(i);
     return out;
 }

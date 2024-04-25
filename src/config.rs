@@ -8,6 +8,8 @@ pub const DEBUG_TIMING:bool = true;
 pub struct Config{
     pub cell_size:f32,
     pub scale_size:f32, 
+    pub render_background:bool,
+    pub render_grid:bool,
 }
 impl Config{
     fn scale_factor(&self)->f32{
@@ -19,6 +21,6 @@ impl Config{
 }
 impl Clone for Config{
     fn clone(&self)->Self{
-        return Config{cell_size:self.cell_size, scale_size:self.scale_size};
+        return Config{cell_size:self.cell_size, scale_size:self.scale_size, render_background:self.render_background, render_grid:self.render_grid};
     }
 }
