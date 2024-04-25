@@ -64,12 +64,12 @@ pub fn vec_2_unsafe(x:f32, y:f32)->rust_raylib::ffi::Vector2{
 }
 pub fn render_stairs(handle:&mut RaylibDrawHandle,location:Vector2){
     let rad = 12.0;
-    let cont = 6;
+    let cont = 7;
     let mut prev = location;
     for i in 0..cont{
         let theta = (i as f32)/(cont as f32)*5.0/6.0*2.0*3.1415;
         let loc2 = vec_2(rad*theta.cos(), rad*theta.sin())+location;
-        let thick = (cont-i) as f32/2.0 as f32+2.0;
+        let thick = (cont-i) as f32/2.0 as f32+1.0;
         handle.draw_line_ex(location,loc2, thick,Color::BLACK);
         if i>0{
             handle.draw_line_ex(prev,loc2, 1.0,Color::BLACK);
@@ -83,12 +83,12 @@ pub unsafe fn convert_to_unsafe_vector(v:Vector2)->rust_raylib::ffi::Vector2{
 pub unsafe fn render_stairs_unsafe(loc:Vector2){
     let location = convert_to_unsafe_vector(loc);
     let rad = 12.0;
-    let cont = 6;
+    let cont = 7;
     let mut prev =location.clone();
     for i in 0..cont{
-        let theta = (i as f32)/(cont as f32)*5.0/6.0*2.0*3.1415;
+        let theta = (i as f32)/(cont as f32)*5.5/6.0*2.0*3.1415;
         let loc2 = vec_2_unsafe(rad*theta.cos()+location.clone().x, rad*theta.sin()+location.clone().y);
-        let thick = (cont-i) as f32/2.0 as f32+2.0;
+        let thick = (cont-i) as f32/3.0 as f32+0.9;
         rust_raylib::ffi::DrawLineEx(location.clone(),loc2.clone(), thick,rust_raylib::ffi::colors::BLACK);
         if i>0{
             rust_raylib::ffi::DrawLineEx(prev,loc2.clone(), 1.0,rust_raylib::ffi::colors::BLACK);
