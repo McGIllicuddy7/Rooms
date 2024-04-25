@@ -56,3 +56,43 @@ pub fn generate_toward_mid(min:i32, max:i32, num_its:i32)->i32{
 pub unsafe fn to_vec_2_unsafe(x:i32, y:i32)->rust_raylib::ffi::Vector2{
     return rust_raylib::ffi::Vector2{x:x as f32, y:y as f32};
 }
+pub fn vec_2(x:f32, y:f32)->Vector2{
+    return Vector2 { x: x, y: y };
+}
+pub fn vec_2_unsafe(x:f32, y:f32)->rust_raylib::ffi::Vector2{
+    return rust_raylib::ffi::Vector2 { x: x, y: y };
+}
+pub fn render_stairs(handle:&mut RaylibDrawHandle,location:Vector2){
+    let rad = 12.0;
+    let cont = 6;
+    let mut prev = location;
+    for i in 0..cont{
+        let theta = (i as f32)/(cont as f32)*5.0/6.0*2.0*3.1415;
+        let loc2 = vec_2(rad*theta.cos(), rad*theta.sin())+location;
+        let thick = (cont-i) as f32/2.0 as f32+2.0;
+        handle.draw_line_ex(location,loc2, thick,Color::BLACK);
+        if i>0{
+            handle.draw_line_ex(prev,loc2, 1.0,Color::BLACK);
+        }
+        prev = loc2;
+    }
+}
+pub unsafe fn convert_to_unsafe_vector(v:Vector2)->rust_raylib::ffi::Vector2{
+    return rust_raylib::ffi::Vector2{x:v.x, y:v.y};
+}
+pub unsafe fn render_stairs_unsafe(loc:Vector2){
+    let location = convert_to_unsafe_vector(loc);
+    let rad = 12.0;
+    let cont = 6;
+    let mut prev =location.clone();
+    for i in 0..cont{
+        let theta = (i as f32)/(cont as f32)*5.0/6.0*2.0*3.1415;
+        let loc2 = vec_2_unsafe(rad*theta.cos()+location.clone().x, rad*theta.sin()+location.clone().y);
+        let thick = (cont-i) as f32/2.0 as f32+2.0;
+        rust_raylib::ffi::DrawLineEx(location.clone(),loc2.clone(), thick,rust_raylib::ffi::colors::BLACK);
+        if i>0{
+            rust_raylib::ffi::DrawLineEx(prev,loc2.clone(), 1.0,rust_raylib::ffi::colors::BLACK);
+        }
+        prev = loc2;
+    }
+} 

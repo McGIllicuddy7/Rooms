@@ -231,9 +231,9 @@ impl Building{
             if other == -1{
                 continue;
             }
-            handle.draw_text("S", s.location.x as i32, s.location.y as i32,24, Color::BLACK);
+            utils::render_stairs(handle, s.location);
             let msg = format!("to {}", other);
-            handle.draw_text(&msg, s.location.x as i32, s.location.y as i32 +20,12, Color::BLACK);
+            handle.draw_text(&msg, s.location.x as i32-6, s.location.y as i32 +12,12, Color::BLACK);
         }
     }
     pub fn num_floors(&self)->usize{
@@ -290,8 +290,7 @@ impl Building{
                 if other == -1{
                     continue;
                 }
-                let stext = vec!['S','\0'];
-                rust_raylib::ffi::DrawText(stext.as_ptr() as *const i8, s.location.x as i32, s.location.y as i32,24, rust_raylib::ffi::colors::BLACK);
+                utils::render_stairs_unsafe(s.location);
                 let msg = format!("to {}", other);
                 rust_raylib::ffi::DrawText(msg.as_ptr() as *const i8, s.location.x as i32, s.location.y as i32 +20,8, rust_raylib::ffi::colors::BLACK);
             }
