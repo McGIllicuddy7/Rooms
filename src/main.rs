@@ -10,6 +10,7 @@ use raylib::{consts::KeyboardKey, prelude::*};
 fn usage_message(){
     println!("usage: room --floors <how many floors> --rooms <how many rooms on first floor>...");
     println!("options:");
+    println!("    --name <name>, name of the building, defaults to \"Building\"");
     println!("    --cell-size <cell size>: size of the cells in pixels(defaults to 25)");
     println!("    --scale-size <scale size>:amount to scale the building by(defaults to 5)");
     println!("    --show-bg <t/f>: whether or not to show a background(defaults to f");
@@ -21,6 +22,7 @@ fn usage_message(){
 fn read_input()->Option<config::Config>{
     enum States{
         None,
+        Name,
         CellSize,
         ScaleSize,
         RenderBackground, 
@@ -28,7 +30,7 @@ fn read_input()->Option<config::Config>{
         NumRooms,
         NumFloors,
     }
-    let mut out:config::Config = config::Config{cell_size:25.0, scale_size:6.0, render_background:false, render_grid:true, num_floors:0, num_rooms:0};
+    let mut out:config::Config = config::Config{cell_size:25.0, scale_size:6.0, render_background:false, render_grid:true, num_floors:0, num_rooms:0, name:format!("Building")};
     let mut args = args();
     let mut state:States = States::None;
     let mut num_rooms_configed = false;
@@ -46,6 +48,9 @@ fn read_input()->Option<config::Config>{
                 last = arg.clone();
                 if arg == "--cell-size"{
                     state = States::CellSize;
+                }
+                else if arg == "--name"{
+                    state = States::Name;
                 }
                 else if arg == "--scale-size"{
                     state = States::ScaleSize;
@@ -117,6 +122,9 @@ fn read_input()->Option<config::Config>{
                 out.num_rooms= t.unwrap();
                 num_rooms_configed = true;
             }
+            States::Name=>{
+                out.name = arg;
+            }
         }
         state = States::None;
     }
@@ -169,7 +177,7 @@ fn main() {
     }
     let confg = confg_opt.unwrap();
     let b: building::Building = building::generate_building(confg.num_rooms, confg.num_floors,&confg);
-    b.render_out("test", &confg);
-    output::output_building(&b, "test");
+    b.render_out(&confg.name, &confg);
+    output::output_building(&b, &confg.name);
     display(b, confg);
 }

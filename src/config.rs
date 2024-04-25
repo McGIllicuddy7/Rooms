@@ -12,6 +12,7 @@ pub struct Config{
     pub render_grid:bool,
     pub num_floors:usize,
     pub num_rooms:i32,
+    pub name:String,
 }
 impl Config{
     fn scale_factor(&self)->f32{
@@ -23,6 +24,6 @@ impl Config{
 }
 impl Clone for Config{
     fn clone(&self)->Self{
-        return Config{cell_size:self.cell_size, scale_size:self.scale_size, render_background:self.render_background, render_grid:self.render_grid, num_floors:self.num_floors, num_rooms:self.num_rooms};
+        return Config{cell_size:self.cell_size, scale_size:self.scale_size, render_background:self.render_background, render_grid:self.render_grid, num_floors:self.num_floors, num_rooms:self.num_rooms, name:format!("")};
     }
 }

@@ -308,7 +308,7 @@ impl Building{
             rust_raylib::ffi::UnloadRenderTexture(bg);
             let mut image = rust_raylib::ffi::LoadImageFromTexture(texture.texture);
             rust_raylib::ffi::ImageFlipVertical(&mut image);
-            let s = format!("output/{}{}.png", name, floor);
+            let s = format!("output/{}{}.png", name, floor+1);
             let tmp = &s;
             rust_raylib::ffi::ExportImage(image, tmp.as_ptr() as *const i8);
     }
