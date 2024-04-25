@@ -320,7 +320,9 @@ impl Building{
         }
         for i in 0..self.num_floors(){
         trustme!{
-                self.render_floor_out(i, name,confg);
+                if self.floors[i].len()>0{
+                    self.render_floor_out(i, name,confg);
+                }
             }
         }
     }
