@@ -1,4 +1,4 @@
-use crate::utils::{convert_to_unsafe_vector, vec_2_unsafe, Vector2};
+use crate::utils::{vec_2_unsafe, Vector2};
 use crate::{
     config::{self, DEBUG_TIMING},
     layout,
