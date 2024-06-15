@@ -178,6 +178,9 @@ fn generate_floors(ground_floor_num: i32, num_floors: usize, confg: &config::Con
         if DEBUG_TIMING {
             println!("floor {} finished in {:#?}", i + 1, Instant::now() - start);
         }
+        if tmp.len() < 1 {
+            break;
+        }
         out.floors.push(tmp);
     }
     return out;
