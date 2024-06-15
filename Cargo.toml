@@ -6,7 +6,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+nalgebra-glm = "0.18.0"
 rand = "0.8.5"
-raylib = "3.7.0"
 rust-raylib = "0.45.11"
 trustme = "1.0.1"
